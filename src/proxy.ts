@@ -4,11 +4,31 @@ import { NextResponse, type NextRequest } from "next/server";
 const PUBLIC_PATHS = ["/login", "/auth"];
 
 export async function proxy(request: NextRequest) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // Sin estas variables no hay forma de validar la sesión. Se avisa en claro
+  // porque el error por defecto ("Internal Server Error") no dice nada.
+  if (!supabaseUrl || !supabaseKey) {
+    const missing = [
+      !supabaseUrl && "NEXT_PUBLIC_SUPABASE_URL",
+      !supabaseKey && "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    ]
+      .filter(Boolean)
+      .join(" y ");
+
+    return new NextResponse(
+      `Falta configurar ${missing} en las variables de entorno del proyecto. ` +
+        "Cargalas en Vercel (Settings → Environment Variables) y volvé a desplegar.",
+      { status: 500, headers: { "content-type": "text/plain; charset=utf-8" } },
+    );
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseKey,
     {
       cookies: {
         getAll() {
