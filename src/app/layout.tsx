@@ -21,7 +21,12 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="es" className={`${geistSans.variable} h-full antialiased`}>
-      <body className="min-h-full">{children}</body>
+      {/* Las extensiones del navegador suelen inyectar atributos en el body
+          antes de que React hidrate; sin esto, avisa de una diferencia que no
+          es nuestra. Solo afecta a este nivel del árbol. */}
+      <body className="min-h-full" suppressHydrationWarning>
+        {children}
+      </body>
     </html>
   );
 }
