@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { Check, MoreHorizontal, Pencil, RotateCcw, Trash2, X } from "lucide-react";
+import posthog from "posthog-js";
 import { deleteItem, setItemStatus } from "@/app/actions";
 import { formatPrice } from "@/lib/format";
 import type { Category, Item } from "@/lib/types";
@@ -43,7 +44,13 @@ export default function ItemCard({ item, categories }: { item: Item; categories:
           pending ? "opacity-50" : ""
         } ${item.status !== "pending" ? "opacity-75" : ""}`}
       >
-        <a href={item.url} target="_blank" rel="noopener noreferrer" className="block">
+        <a
+          href={item.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block"
+          onClick={() => posthog.capture("item_opened", { has_price: item.price_amount !== null })}
+        >
           <div className="relative aspect-4/3 bg-stone-100">
             {item.image_url ? (
               isStored ? (
@@ -140,19 +147,28 @@ export default function ItemCard({ item, categories }: { item: Item; categories:
                   <MenuItem
                     icon={<Check className="size-3.5" />}
                     label="Marcar comprado"
-                    onClick={() => run(() => setItemStatus(item.id, "bought"))}
+                    onClick={() => {
+                      posthog.capture("item_status_changed", { from_status: item.status, to_status: "bought" });
+                      run(() => setItemStatus(item.id, "bought"));
+                    }}
                   />
                   <MenuItem
                     icon={<X className="size-3.5" />}
                     label="Descartar"
-                    onClick={() => run(() => setItemStatus(item.id, "discarded"))}
+                    onClick={() => {
+                      posthog.capture("item_status_changed", { from_status: item.status, to_status: "discarded" });
+                      run(() => setItemStatus(item.id, "discarded"));
+                    }}
                   />
                 </>
               ) : (
                 <MenuItem
                   icon={<RotateCcw className="size-3.5" />}
                   label="Volver a pendiente"
-                  onClick={() => run(() => setItemStatus(item.id, "pending"))}
+                  onClick={() => {
+                    posthog.capture("item_status_changed", { from_status: item.status, to_status: "pending" });
+                    run(() => setItemStatus(item.id, "pending"));
+                  }}
                 />
               )}
               <MenuItem
@@ -160,8 +176,10 @@ export default function ItemCard({ item, categories }: { item: Item; categories:
                 label="Borrar"
                 destructive
                 onClick={() => {
-                  if (confirm("¿Borrar este link de la lista?")) run(() => deleteItem(item.id));
-                  else setMenuOpen(false);
+                  if (confirm("¿Borrar este link de la lista?")) {
+                    posthog.capture("item_deleted");
+                    run(() => deleteItem(item.id));
+                  } else setMenuOpen(false);
                 }}
               />
             </div>

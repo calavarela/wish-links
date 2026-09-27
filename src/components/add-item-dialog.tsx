@@ -2,6 +2,7 @@
 
 import { useActionState, useCallback, useEffect, useState } from "react";
 import { AlertCircle, Loader2 } from "lucide-react";
+import posthog from "posthog-js";
 import { createItem, type ActionState } from "@/app/actions";
 import type { Category, LinkPreview } from "@/lib/types";
 import Dialog from "./dialog";
@@ -86,6 +87,7 @@ export default function AddItemDialog({
           className="flex flex-col gap-3 p-5"
           onSubmit={(event) => {
             event.preventDefault();
+            posthog.capture("item_preview_requested", { source: "manual_entry" });
             void loadPreview(url);
           }}
         >
@@ -126,7 +128,11 @@ export default function AddItemDialog({
           </button>
         </form>
       ) : (
-        <form action={formAction} className="flex flex-col gap-4 p-5">
+        <form
+          action={formAction}
+          className="flex flex-col gap-4 p-5"
+          onSubmit={() => posthog.capture("item_add_submitted")}
+        >
           <input type="hidden" name="url" value={preview.url} />
           <input type="hidden" name="canonicalUrl" value={preview.canonicalUrl} />
           <input type="hidden" name="siteName" value={preview.siteName ?? ""} />

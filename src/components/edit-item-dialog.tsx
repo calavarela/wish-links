@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect } from "react";
 import { AlertCircle, ExternalLink, Loader2 } from "lucide-react";
+import posthog from "posthog-js";
 import { updateItem, type ActionState } from "@/app/actions";
 import type { Category, Item } from "@/lib/types";
 import Dialog from "./dialog";
@@ -28,7 +29,11 @@ export default function EditItemDialog({
 
   return (
     <Dialog open={open} onClose={onClose} title="Editar link">
-      <form action={formAction} className="flex flex-col gap-4 p-5">
+      <form
+        action={formAction}
+        className="flex flex-col gap-4 p-5"
+        onSubmit={() => posthog.capture("item_edit_submitted")}
+      >
         <input type="hidden" name="id" value={item.id} />
 
         <a

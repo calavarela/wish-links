@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Heart, LogOut, Plus, Search } from "lucide-react";
+import posthog from "posthog-js";
 import { signOut } from "@/app/actions";
 import type { Category } from "@/lib/types";
 import AddItemDialog from "./add-item-dialog";
@@ -78,7 +79,12 @@ export default function AppHeader({
             <span className="hidden sm:block">Agregar</span>
           </button>
 
-          <form action={signOut}>
+          <form
+            action={signOut}
+            onSubmit={() => {
+              posthog.reset();
+            }}
+          >
             <button
               type="submit"
               aria-label="Cerrar sesión"

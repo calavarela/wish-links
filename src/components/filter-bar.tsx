@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Loader2, Settings2, Trash2 } from "lucide-react";
+import posthog from "posthog-js";
 import { createCategory, deleteCategory, type ActionState } from "@/app/actions";
 import type { Category, Item, ItemStatus } from "@/lib/types";
 import Dialog from "./dialog";
@@ -43,6 +44,10 @@ export default function FilterBar({
   const [managing, setManaging] = useState(false);
 
   function setParam(key: string, value: string | null) {
+    posthog.capture("filter_applied", {
+      filter: key,
+      selection: key === "cat" ? (value === "none" ? "uncategorized" : value ? "category" : "all") : value ?? "default",
+    });
     const params = new URLSearchParams(searchParams);
     if (value) params.set(key, value);
     else params.delete(key);
@@ -178,7 +183,10 @@ function CategoryManager({
                 {category.name}
                 <span className="ml-2 text-xs text-subtle">{countFor(category.id)}</span>
               </span>
-              <form action={deleteCategory.bind(null, category.id)}>
+              <form
+                action={deleteCategory.bind(null, category.id)}
+                onSubmit={() => posthog.capture("category_deleted")}
+              >
                 <button
                   type="submit"
                   aria-label={`Borrar ${category.name}`}
@@ -195,7 +203,12 @@ function CategoryManager({
           Al borrar una categoría, sus links quedan en “Sin categoría”. No se borra nada.
         </p>
 
-        <form key={formKey} action={formAction} className="flex gap-2 border-t border-line pt-4">
+        <form
+          key={formKey}
+          action={formAction}
+          className="flex gap-2 border-t border-line pt-4"
+          onSubmit={() => posthog.capture("category_created")}
+        >
           <input className={`${fieldClass} w-16 text-center`} name="emoji" placeholder="✨" maxLength={4} />
           <input className={fieldClass} name="name" placeholder="Nueva categoría" maxLength={40} required />
           <button

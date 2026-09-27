@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { Loader2 } from "lucide-react";
+import posthog from "posthog-js";
 import { signIn, signUp, type AuthState } from "./actions";
 
 const EMPTY: AuthState = { error: null, message: null };
@@ -20,7 +21,12 @@ export default function LoginForm({ next }: { next: string }) {
 
   return (
     <div className="rounded-2xl border border-line bg-surface p-6">
-      <form action={isSignIn ? signInAction : signUpAction} className="flex flex-col gap-3" key={mode}>
+      <form
+        action={isSignIn ? signInAction : signUpAction}
+        className="flex flex-col gap-3"
+        key={mode}
+        onSubmit={() => posthog.capture(isSignIn ? "sign_in_submitted" : "sign_up_submitted")}
+      >
         <input type="hidden" name="next" value={next} />
 
         <label className="flex flex-col gap-1.5">
