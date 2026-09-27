@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Heart, LogOut, Plus, Search } from "lucide-react";
 import { signOut } from "@/app/actions";
@@ -36,13 +36,16 @@ export default function AppHeader({
     return () => clearTimeout(timeout);
   }, [query, pathname, router, searchParams]);
 
-  function closeDialog() {
+  // Estable entre renders: si cambiara de referencia en cada render, el
+  // efecto de éxito en AddItemDialog (que depende de onClose) se
+  // re-dispararía al reabrir el diálogo y lo cerraría de inmediato.
+  const closeDialog = useCallback(() => {
     setAdding(false);
     if (prefillUrl) {
       // Saca el ?add= de la URL para que no se reabra al recargar.
       router.replace(pathname, { scroll: false });
     }
-  }
+  }, [prefillUrl, pathname, router]);
 
   return (
     <>
