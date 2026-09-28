@@ -36,12 +36,32 @@ const TRACKING_PARAMS = [
   /^ascsubtag$/i,
 ];
 
+const MERCADO_LIBRE_HOST = /(^|\.)mercadoli[bv]re\./i;
+
+/**
+ * La app de Mercado Libre comparte un link de verificación que lleva el
+ * producto real en `go`. Sin desenvolverlo, todos los productos se ven iguales.
+ */
+function unwrapMercadoLibre(url: URL): URL {
+  if (!MERCADO_LIBRE_HOST.test(url.hostname) || !url.pathname.startsWith("/gz/account-verification")) {
+    return url;
+  }
+  const target = url.searchParams.get("go");
+  if (!target) return url;
+  try {
+    const inner = new URL(target);
+    return MERCADO_LIBRE_HOST.test(inner.hostname) && /^https?:$/.test(inner.protocol) ? inner : url;
+  } catch {
+    return url;
+  }
+}
+
 export function normalizeUrlInput(raw: string): string | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
   const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
   try {
-    const url = new URL(withScheme);
+    const url = unwrapMercadoLibre(new URL(withScheme));
     if (url.protocol !== "http:" && url.protocol !== "https:") return null;
     if (!url.hostname.includes(".")) return null;
     return url.toString();
