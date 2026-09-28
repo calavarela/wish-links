@@ -224,6 +224,37 @@ export async function deleteCategory(id: string) {
   revalidatePath("/");
 }
 
+/** Borra imágenes, links, categorías y el usuario. No hay vuelta atrás. */
+export async function deleteAccount(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = await createClient();
+  const user = await requireUser(supabase);
+
+  if (text(formData.get("confirmation"), 20)?.toUpperCase() !== "ELIMINAR") {
+    return { error: "Escribí ELIMINAR para confirmar." };
+  }
+
+  // Los archivos del Storage no caen con el usuario, así que se borran primero.
+  const bucket = supabase.storage.from("previews");
+  for (let round = 0; round < 50; round++) {
+    const { data: files, error: listError } = await bucket.list(user.id, { limit: 100 });
+    if (listError) return { error: "No se pudieron borrar tus imágenes. Probá de nuevo." };
+    if (!files?.length) break;
+
+    const { data: removed, error: removeError } = await bucket.remove(
+      files.map((file) => `${user.id}/${file.name}`),
+    );
+    if (removeError || !removed?.length) {
+      return { error: "No se pudieron borrar tus imágenes. Probá de nuevo." };
+    }
+  }
+
+  const { error } = await supabase.rpc("delete_own_account");
+  if (error) return { error: "No se pudo eliminar la cuenta. Probá de nuevo." };
+
+  await supabase.auth.signOut({ scope: "local" });
+  redirect("/login?deleted=1");
+}
+
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();

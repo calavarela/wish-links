@@ -1,8 +1,9 @@
+import Link from "next/link";
 import { Heart } from "lucide-react";
 import LoginForm from "./login-form";
 
 export default async function LoginPage(props: PageProps<"/login">) {
-  const { next } = await props.searchParams;
+  const { next, deleted } = await props.searchParams;
   const redirectTo = typeof next === "string" && next.startsWith("/") ? next : "/";
 
   return (
@@ -18,7 +19,21 @@ export default async function LoginPage(props: PageProps<"/login">) {
           </p>
         </div>
 
+        {deleted === "1" && (
+          <p className="mb-4 rounded-xl bg-stone-100 px-4 py-3 text-center text-sm text-muted">
+            Tu cuenta y tus datos fueron eliminados.
+          </p>
+        )}
+
         <LoginForm next={redirectTo} />
+
+        <p className="mt-6 text-center text-xs text-subtle">
+          Al usar Wish Links aceptás la{" "}
+          <Link href="/privacidad" className="underline transition hover:text-ink">
+            política de privacidad
+          </Link>
+          .
+        </p>
       </div>
     </main>
   );

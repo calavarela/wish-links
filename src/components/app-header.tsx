@@ -32,6 +32,9 @@ export default function AppHeader({
       const params = new URLSearchParams(searchParams);
       if (query.trim()) params.set("q", query.trim());
       else params.delete("q");
+      // Sin este chequeo, cada navegación cambia searchParams y re-dispara este
+      // efecto en un bucle de peticiones al servidor.
+      if (params.toString() === searchParams.toString()) return;
       router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     }, 300);
     return () => clearTimeout(timeout);

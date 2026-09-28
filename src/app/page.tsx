@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Category, Item, ItemStatus } from "@/lib/types";
+import AccountFooter from "@/components/account-footer";
 import AppHeader from "@/components/app-header";
 import FilterBar from "@/components/filter-bar";
 import ItemGrid from "@/components/item-grid";
@@ -103,6 +104,8 @@ export default async function HomePage(props: PageProps<"/">) {
 
         <ItemGrid items={visible} categories={categoryList} hasAnyItem={items.length > 0} />
       </main>
+
+      <AccountFooter />
     </div>
   );
 }
