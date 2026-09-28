@@ -49,7 +49,13 @@ export default function ItemCard({ item, categories }: { item: Item; categories:
           target="_blank"
           rel="noopener noreferrer"
           className="block"
-          onClick={() => posthog.capture("item_opened", { has_price: item.price_amount !== null })}
+          onClick={() =>
+            posthog.capture("item_opened", {
+              domain: item.domain,
+              has_price: item.price_amount !== null,
+              status: item.status,
+            })
+          }
         >
           <div className="relative aspect-4/3 bg-stone-100">
             {item.image_url ? (

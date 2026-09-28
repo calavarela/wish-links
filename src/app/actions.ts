@@ -7,8 +7,12 @@ import { createClient } from "@/lib/supabase/server";
 import type { ItemStatus } from "@/lib/types";
 import { canonicalizeUrl, faviconFor, getDomain, isPubliclyFetchable, normalizeUrlInput } from "@/lib/url";
 
-/** `ok` se usa en el cliente para saber cuándo cerrar el diálogo. */
-export type ActionState = { error: string | null; ok?: boolean };
+/** `ok` se usa en el cliente para saber cuándo cerrar el diálogo; `saved` alimenta analytics. */
+export type ActionState = {
+  error: string | null;
+  ok?: boolean;
+  saved?: { domain: string; has_price: boolean; has_category: boolean };
+};
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const EXTENSIONS: Record<string, string> = {
@@ -115,19 +119,21 @@ export async function createItem(_prev: ActionState, formData: FormData): Promis
 
   const categoryId = text(formData.get("categoryId"), 64);
   const status = (text(formData.get("status"), 16) ?? "pending") as ItemStatus;
+  const domain = getDomain(url);
+  const priceAmount = parseAmount(formData.get("priceAmount"));
 
   const { error } = await supabase.from("items").insert({
     user_id: user.id,
     category_id: categoryId,
     url,
     canonical_url: canonical,
-    domain: getDomain(url),
+    domain,
     site_name: text(formData.get("siteName"), 120),
     title: text(formData.get("title"), 300),
     description: text(formData.get("description"), 400),
     image_url: imageUrl,
     favicon_url: faviconFor(url),
-    price_amount: parseAmount(formData.get("priceAmount")),
+    price_amount: priceAmount,
     price_currency: text(formData.get("priceCurrency"), 8),
     status,
     note: text(formData.get("note"), 500),
@@ -140,7 +146,11 @@ export async function createItem(_prev: ActionState, formData: FormData): Promis
   }
 
   revalidatePath("/");
-  return { error: null, ok: true };
+  return {
+    error: null,
+    ok: true,
+    saved: { domain, has_price: priceAmount !== null, has_category: categoryId !== null },
+  };
 }
 
 export async function updateItem(_prev: ActionState, formData: FormData): Promise<ActionState> {

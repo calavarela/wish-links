@@ -66,6 +66,7 @@ export default function AddItemDialog({
 
   useEffect(() => {
     if (state.ok) {
+      if (state.saved) posthog.capture("item_added", state.saved);
       setUrl("");
       setPreview(null);
       onClose();
@@ -128,11 +129,7 @@ export default function AddItemDialog({
           </button>
         </form>
       ) : (
-        <form
-          action={formAction}
-          className="flex flex-col gap-4 p-5"
-          onSubmit={() => posthog.capture("item_add_submitted")}
-        >
+        <form action={formAction} className="flex flex-col gap-4 p-5">
           <input type="hidden" name="url" value={preview.url} />
           <input type="hidden" name="canonicalUrl" value={preview.canonicalUrl} />
           <input type="hidden" name="siteName" value={preview.siteName ?? ""} />

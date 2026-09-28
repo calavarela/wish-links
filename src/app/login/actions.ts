@@ -1,9 +1,15 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-export type AuthState = { error: string | null; message: string | null };
+/** `event` le dice al cliente qué registrar en analytics; `next` a dónde ir. */
+export type AuthState = {
+  error: string | null;
+  message: string | null;
+  event?: "login" | "sign_up";
+  next?: string;
+  user?: { id: string; email: string | null };
+};
 
 function readCredentials(formData: FormData) {
   return {
@@ -13,12 +19,17 @@ function readCredentials(formData: FormData) {
   };
 }
 
+/** Solo rutas internas, para que nadie arme un link que saque afuera. */
+function safeNext(next: string): string {
+  return next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\") ? next : "/";
+}
+
 export async function signIn(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const { email, password, next } = readCredentials(formData);
   if (!email || !password) return { error: "Completá email y contraseña.", message: null };
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
     const invalid = /invalid login credentials/i.test(error.message);
@@ -28,8 +39,13 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
     };
   }
 
-  // Solo se permiten rutas internas, para que nadie arme un link que saque afuera.
-  redirect(next.startsWith("/") ? next : "/");
+  return {
+    error: null,
+    message: null,
+    event: "login",
+    next: safeNext(next),
+    user: { id: data.user.id, email: data.user.email ?? null },
+  };
 }
 
 export async function signUp(_prev: AuthState, formData: FormData): Promise<AuthState> {
@@ -48,13 +64,20 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
     };
   }
 
+  // Con confirmación por email activa, un email ya registrado devuelve un
+  // usuario falso sin identidades: no es un registro nuevo y no se mide.
+  const isNewUser = (data.user?.identities?.length ?? 0) > 0;
+  const user =
+    isNewUser && data.user ? { id: data.user.id, email: data.user.email ?? null } : undefined;
+
   // Si el proyecto pide confirmación por email, todavía no hay sesión.
   if (!data.session) {
     return {
       error: null,
       message: "Te mandamos un mail para confirmar la cuenta. Abrilo y volvé a entrar.",
+      ...(user && { event: "sign_up" as const, user }),
     };
   }
 
-  redirect("/");
+  return { error: null, message: null, event: "sign_up", next: "/", user };
 }

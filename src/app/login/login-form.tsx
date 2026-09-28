@@ -1,11 +1,26 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import posthog from "posthog-js";
 import { signIn, signUp, type AuthState } from "./actions";
 
 const EMPTY: AuthState = { error: null, message: null };
+
+/** Registra el éxito (ya con el usuario identificado) y recién después navega. */
+function useAuthSuccess(state: AuthState) {
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!state.event) return;
+    if (state.user) {
+      posthog.identify(state.user.id, state.user.email ? { email: state.user.email } : undefined);
+    }
+    posthog.capture(state.event);
+    if (state.next) router.replace(state.next);
+  }, [state, router]);
+}
 
 const inputClass =
   "w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm outline-none placeholder:text-subtle focus:border-ink";
@@ -14,6 +29,8 @@ export default function LoginForm({ next }: { next: string }) {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [signInState, signInAction, signingIn] = useActionState(signIn, EMPTY);
   const [signUpState, signUpAction, signingUp] = useActionState(signUp, EMPTY);
+  useAuthSuccess(signInState);
+  useAuthSuccess(signUpState);
 
   const isSignIn = mode === "signin";
   const state = isSignIn ? signInState : signUpState;
@@ -25,7 +42,6 @@ export default function LoginForm({ next }: { next: string }) {
         action={isSignIn ? signInAction : signUpAction}
         className="flex flex-col gap-3"
         key={mode}
-        onSubmit={() => posthog.capture(isSignIn ? "sign_in_submitted" : "sign_up_submitted")}
       >
         <input type="hidden" name="next" value={next} />
 
