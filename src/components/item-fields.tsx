@@ -3,9 +3,7 @@
 import { useRef, useState } from "react";
 import { ImagePlus, Link2 } from "lucide-react";
 import type { Category, ItemStatus } from "@/lib/types";
-import { STATUS_LABELS } from "@/lib/types";
-
-const CURRENCIES = ["ARS", "USD", "EUR", "BRL", "CLP", "MXN", "UYU", "GBP"];
+import { CURRENCIES, STATUS_LABELS } from "@/lib/types";
 
 export const fieldClass =
   "w-full rounded-xl border border-line bg-surface px-3 py-2 text-sm outline-none placeholder:text-subtle focus:border-ink";

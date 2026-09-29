@@ -1,5 +1,7 @@
 export type ItemStatus = "pending" | "bought" | "discarded";
 
+export const CURRENCIES = ["ARS", "USD", "EUR", "BRL", "CLP", "MXN", "UYU", "GBP"];
+
 export const STATUS_LABELS: Record<ItemStatus, string> = {
   pending: "Pendiente",
   bought: "Comprado",
@@ -38,6 +40,9 @@ export type Item = {
   purchased_at: string | null;
   /** Respuesta a "¿Lo compraste desde Wish Links?"; null = no contestó. */
   purchase_source: PurchaseSource | null;
+  /** Lo que terminó pagando, si lo contó al marcar comprado. */
+  paid_amount: number | null;
+  paid_currency: string | null;
   created_at: string;
   updated_at: string;
 };

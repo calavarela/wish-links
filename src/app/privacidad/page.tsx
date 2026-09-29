@@ -47,7 +47,7 @@ export default function PrivacyPage() {
               categorías que creás y las imágenes de los productos (las que subís o las que
               copiamos de la tienda para que no se pierdan). De cada link también guardamos la
               última vez que lo abriste desde la app, cuándo lo marcaste como comprado y, si nos
-              lo contás, si lo compraste entrando desde Wish Links.
+              lo contás, cuánto pagaste y si lo compraste entrando desde Wish Links.
             </>,
             <>
               <strong className="text-ink">Datos de uso:</strong> las páginas que visitás, los

@@ -6,9 +6,10 @@ import { Check, MoreHorizontal, Pencil, RotateCcw, Trash2, X } from "lucide-reac
 import posthog from "posthog-js";
 import { deleteItem, setItemStatus } from "@/app/actions";
 import { formatPrice } from "@/lib/format";
-import type { Category, Item, PurchaseSource } from "@/lib/types";
+import { CURRENCIES, type Category, type Item, type PurchaseSource } from "@/lib/types";
 import Dialog from "./dialog";
 import EditItemDialog from "./edit-item-dialog";
+import { fieldClass } from "./item-fields";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 
@@ -17,6 +18,8 @@ export default function ItemCard({ item, categories }: { item: Item; categories:
   const [editing, setEditing] = useState(false);
   const [askingSource, setAskingSource] = useState(false);
   const closeAsk = useCallback(() => setAskingSource(false), []);
+  const [paidAmount, setPaidAmount] = useState("");
+  const [paidCurrency, setPaidCurrency] = useState("ARS");
   const [pending, startTransition] = useTransition();
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -30,6 +33,7 @@ export default function ItemCard({ item, categories }: { item: Item; categories:
   }, [menuOpen]);
 
   const price = formatPrice(item.price_amount, item.price_currency);
+  const paid = formatPrice(item.paid_amount, item.paid_currency);
   const isStored = Boolean(item.image_url && SUPABASE_URL && item.image_url.startsWith(SUPABASE_URL));
   const category = categories.find((c) => c.id === item.category_id);
 
@@ -48,19 +52,35 @@ export default function ItemCard({ item, categories }: { item: Item; categories:
     });
   }
 
+  function askPurchase() {
+    setMenuOpen(false);
+    setPaidAmount("");
+    setPaidCurrency(item.price_currency ?? "ARS");
+    setAskingSource(true);
+  }
+
   function markBought(source: PurchaseSource | null) {
     setAskingSource(false);
     const daysSinceOpen = item.last_opened_at
       ? Math.floor((Date.now() - new Date(item.last_opened_at).getTime()) / 86_400_000)
       : null;
+    const paid = Number.parseFloat(paidAmount.replace(",", "."));
+    const hasPaid = Number.isFinite(paid) && paid >= 0;
+    // Solo se compara si está en la misma moneda: sin cotización, otra cosa no tiene sentido.
+    const paidVsListedPct =
+      hasPaid && item.price_amount && (item.price_currency ?? "ARS") === paidCurrency
+        ? Math.round(((paid - item.price_amount) / item.price_amount) * 100)
+        : null;
     posthog.capture("item_status_changed", {
       from_status: item.status,
       to_status: "bought",
       purchase_source: source ?? "unanswered",
       opened_from_app: daysSinceOpen !== null,
       days_since_last_open: daysSinceOpen,
+      has_paid_amount: hasPaid,
+      paid_vs_listed_pct: paidVsListedPct,
     });
-    run(() => setItemStatus(item.id, "bought", source));
+    run(() => setItemStatus(item.id, "bought", { source, paidAmount, paidCurrency }));
   }
 
   return (
@@ -132,6 +152,8 @@ export default function ItemCard({ item, categories }: { item: Item; categories:
 
             {price && <p className="text-sm font-semibold">{price}</p>}
 
+            {item.status === "bought" && paid && <p className="text-xs text-muted">Pagaste {paid}</p>}
+
             {item.note && <p className="line-clamp-1 text-xs text-muted">{item.note}</p>}
 
             {(category || item.tags.length > 0) && (
@@ -177,10 +199,7 @@ export default function ItemCard({ item, categories }: { item: Item; categories:
                   <MenuItem
                     icon={<Check className="size-3.5" />}
                     label="Marcar comprado"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      setAskingSource(true);
-                    }}
+                    onClick={askPurchase}
                   />
                   <MenuItem
                     icon={<X className="size-3.5" />}
@@ -227,6 +246,33 @@ export default function ItemCard({ item, categories }: { item: Item; categories:
       {/* Cerrar con la X o tocando afuera cancela: puede haber sido un toque sin querer. */}
       <Dialog open={askingSource} onClose={closeAsk} title="¡Qué bueno que lo compraste!">
         <div className="flex flex-col gap-4 p-5">
+          <div className="grid grid-cols-[1fr_auto] gap-2">
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-medium text-muted">¿Cuánto pagaste? (opcional)</span>
+              <input
+                className={fieldClass}
+                inputMode="decimal"
+                value={paidAmount}
+                onChange={(event) => setPaidAmount(event.target.value)}
+                placeholder={item.price_amount !== null ? String(item.price_amount) : "0"}
+              />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-medium text-muted">Moneda</span>
+              <select
+                className={`${fieldClass} pr-8`}
+                value={paidCurrency}
+                onChange={(event) => setPaidCurrency(event.target.value)}
+              >
+                {CURRENCIES.map((code) => (
+                  <option key={code} value={code}>
+                    {code}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
           <p className="text-sm text-muted">
             ¿Lo compraste entrando desde el link de Wish Links? Nos ayuda a saber si la app te sirve.
           </p>

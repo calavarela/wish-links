@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
-import type { ItemStatus, PurchaseSource } from "@/lib/types";
+import { CURRENCIES, type ItemStatus, type PurchaseSource } from "@/lib/types";
 import { canonicalizeUrl, faviconFor, getDomain, isPubliclyFetchable, normalizeUrlInput } from "@/lib/url";
 
 /** `ok` se usa en el cliente para saber cuándo cerrar el diálogo; `saved` alimenta analytics. */
@@ -187,13 +187,32 @@ export async function updateItem(_prev: ActionState, formData: FormData): Promis
   return { error: null, ok: true };
 }
 
-/** `source` solo aplica al marcar comprado; la fecha de compra la pone la base. */
-export async function setItemStatus(id: string, status: ItemStatus, source: PurchaseSource | null = null) {
+export type PurchaseDetails = {
+  source: PurchaseSource | null;
+  paidAmount: string;
+  paidCurrency: string;
+};
+
+/**
+ * `purchase` solo aplica al marcar comprado. La fecha de compra la pone la
+ * base, y un trigger limpia estos datos si el item vuelve a otro estado.
+ */
+export async function setItemStatus(id: string, status: ItemStatus, purchase?: PurchaseDetails) {
   const supabase = await createClient();
   await requireUser(supabase);
+
+  const paidAmount = status === "bought" && purchase ? parseAmount(purchase.paidAmount) : null;
+  const paidCurrency =
+    paidAmount !== null && purchase && CURRENCIES.includes(purchase.paidCurrency) ? purchase.paidCurrency : "ARS";
+
   await supabase
     .from("items")
-    .update({ status, purchase_source: status === "bought" ? source : null })
+    .update({
+      status,
+      purchase_source: status === "bought" ? (purchase?.source ?? null) : null,
+      paid_amount: paidAmount,
+      paid_currency: paidAmount !== null ? paidCurrency : null,
+    })
     .eq("id", id);
   revalidatePath("/");
 }
