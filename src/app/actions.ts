@@ -198,16 +198,6 @@ export async function setItemStatus(id: string, status: ItemStatus, source: Purc
   revalidatePath("/");
 }
 
-/**
- * Registra que el link se abrió desde la app, para cruzarlo después con la
- * fecha de compra. No revalida: no cambia nada de lo que se ve.
- */
-export async function markItemOpened(id: string) {
-  const supabase = await createClient();
-  await requireUser(supabase);
-  await supabase.from("items").update({ last_opened_at: new Date().toISOString() }).eq("id", id);
-}
-
 export async function deleteItem(id: string) {
   const supabase = await createClient();
   await requireUser(supabase);

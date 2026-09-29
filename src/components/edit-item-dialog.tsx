@@ -37,7 +37,7 @@ export default function EditItemDialog({
         <input type="hidden" name="id" value={item.id} />
 
         <a
-          href={item.url}
+          href={`/go/${item.id}`}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-2 rounded-xl bg-stone-100 px-3 py-2 text-xs text-muted transition hover:text-ink"

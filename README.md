@@ -57,6 +57,15 @@ que se puede abrir sin cuenta. La página pública lee con la función `get_shar
 notas, tags ni email. Las policies de `items` no cambian. Desactivar el link borra la fila y
 el token deja de funcionar.
 
+## Salida a las tiendas y afiliados
+
+Las tarjetas no apuntan directo a la tienda sino a `/go/<id>` (o `/go/<id>?s=<token>` desde
+una lista compartida). Esa ruta registra el clic (`items.last_opened_at`) y redirige al link
+guardado, pasándolo antes por `src/lib/affiliate.ts`. Ahí hay una regla por programa de
+afiliados, que se activa con su variable de entorno (por ahora `AMAZON_ASSOCIATE_TAG`). En la
+base siempre queda el link original. La ruta solo redirige a URLs guardadas, así que no sirve
+como redirección abierta.
+
 ## Guardar desde el celular
 
 `public/manifest.json` declara un `share_target`: al instalar la web como app en Android,

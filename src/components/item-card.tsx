@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { Check, MoreHorizontal, Pencil, RotateCcw, Trash2, X } from "lucide-react";
 import posthog from "posthog-js";
-import { deleteItem, markItemOpened, setItemStatus } from "@/app/actions";
+import { deleteItem, setItemStatus } from "@/app/actions";
 import { formatPrice } from "@/lib/format";
 import type { Category, Item, PurchaseSource } from "@/lib/types";
 import Dialog from "./dialog";
@@ -46,7 +46,6 @@ export default function ItemCard({ item, categories }: { item: Item; categories:
       has_price: item.price_amount !== null,
       status: item.status,
     });
-    void markItemOpened(item.id);
   }
 
   function markBought(source: PurchaseSource | null) {
@@ -72,7 +71,7 @@ export default function ItemCard({ item, categories }: { item: Item; categories:
         } ${item.status !== "pending" ? "opacity-75" : ""}`}
       >
         <a
-          href={item.url}
+          href={`/go/${item.id}`}
           target="_blank"
           rel="noopener noreferrer"
           className="block"

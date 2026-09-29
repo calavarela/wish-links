@@ -65,7 +65,7 @@ export default async function SharedWishlistPage(props: PageProps<"/w/[token]">)
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {list.items.map((item) => (
-            <SharedCard key={item.id} item={item} showCategory={!list.category} />
+            <SharedCard key={item.id} item={item} token={token} showCategory={!list.category} />
           ))}
         </div>
       </main>
@@ -80,13 +80,21 @@ export default async function SharedWishlistPage(props: PageProps<"/w/[token]">)
   );
 }
 
-function SharedCard({ item, showCategory }: { item: SharedItem; showCategory: boolean }) {
+function SharedCard({
+  item,
+  token,
+  showCategory,
+}: {
+  item: SharedItem;
+  token: string;
+  showCategory: boolean;
+}) {
   const price = formatPrice(item.price_amount, item.price_currency);
   const isStored = Boolean(item.image_url && SUPABASE_URL && item.image_url.startsWith(SUPABASE_URL));
 
   return (
     <SharedItemLink
-      href={item.url}
+      href={`/go/${item.id}?s=${token}`}
       domain={item.domain}
       hasPrice={item.price_amount !== null}
       scope={showCategory ? "all" : "category"}
