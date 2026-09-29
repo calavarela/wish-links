@@ -23,6 +23,9 @@ export default function AccountFooter() {
   return (
     <>
       <footer className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 px-4 pb-8 text-xs text-subtle sm:px-6">
+        <Link href="/terminos" className="transition hover:text-ink">
+          Términos y condiciones
+        </Link>
         <Link href="/privacidad" className="transition hover:text-ink">
           Política de privacidad
         </Link>

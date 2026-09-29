@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import type { ReactNode } from "react";
+import { LegalPage, List, Section } from "@/components/legal-page";
 
 export const metadata: Metadata = {
   title: "Política de privacidad · Wish Links",
@@ -11,45 +10,19 @@ export const metadata: Metadata = {
 const CONTACT_EMAIL = "calavarela2004@gmail.com";
 const UPDATED = "27 de septiembre de 2026";
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="mt-8">
-      <h2 className="text-base font-semibold tracking-tight">{title}</h2>
-      <div className="mt-2 flex flex-col gap-3 text-sm leading-relaxed text-muted">{children}</div>
-    </section>
-  );
-}
-
-function List({ items }: { items: ReactNode[] }) {
-  return (
-    <ul className="flex list-disc flex-col gap-1.5 pl-5">
-      {items.map((item, index) => (
-        <li key={index}>{item}</li>
-      ))}
-    </ul>
-  );
-}
-
 export default function PrivacyPage() {
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-10 sm:px-6">
-      <Link
-        href="/"
-        className="inline-flex items-center gap-1.5 text-xs text-muted transition hover:text-ink"
-      >
-        <ArrowLeft className="size-3.5" />
-        Volver a Wish Links
-      </Link>
-
-      <h1 className="mt-6 text-2xl font-semibold tracking-tight">Política de privacidad</h1>
-      <p className="mt-1 text-xs text-subtle">Última actualización: {UPDATED}</p>
-
-      <p className="mt-6 text-sm leading-relaxed text-muted">
-        Wish Links es una lista personal donde guardás los links de lo que querés comprar. Esta
-        página explica, en simple, qué datos guardamos, para qué los usamos y cómo podés
-        borrarlos.
-      </p>
-
+    <LegalPage
+      title="Política de privacidad"
+      updated={UPDATED}
+      intro={
+        <>
+          Wish Links es una lista personal donde guardás los links de lo que querés comprar. Esta
+          página explica, en simple, qué datos guardamos, para qué los usamos y cómo podés
+          borrarlos.
+        </>
+      }
+    >
       <Section title="Quién es el responsable">
         <p>
           El equipo de Wish Links es responsable del tratamiento de tus datos. Para cualquier
@@ -82,9 +55,7 @@ export default function PrivacyPage() {
             </>,
           ]}
         />
-        <p>
-          No grabamos tu pantalla, no usamos tus datos para publicidad y no los vendemos.
-        </p>
+        <p>No grabamos tu pantalla, no usamos tus datos para publicidad y no los vendemos.</p>
       </Section>
 
       <Section title="Para qué los usamos">
@@ -145,9 +116,7 @@ export default function PrivacyPage() {
       </Section>
 
       <Section title="Tus derechos">
-        <p>
-          Podés acceder a tus datos, corregirlos o pedir que los eliminemos.
-        </p>
+        <p>Podés acceder a tus datos, corregirlos o pedir que los eliminemos.</p>
         <List
           items={[
             <>
@@ -186,10 +155,16 @@ export default function PrivacyPage() {
       </Section>
 
       <Section title="Cambios en esta política">
-        <p>
-          Si cambiamos algo importante, actualizamos esta página y la fecha de arriba.
-        </p>
+        <p>Si cambiamos algo importante, actualizamos esta página y la fecha de arriba.</p>
       </Section>
-    </main>
+
+      <p className="mt-8 text-xs text-subtle">
+        Ver también los{" "}
+        <Link href="/terminos" className="underline hover:text-ink">
+          términos y condiciones de uso
+        </Link>
+        .
+      </p>
+    </LegalPage>
   );
 }

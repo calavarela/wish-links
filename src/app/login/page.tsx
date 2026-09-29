@@ -28,7 +28,11 @@ export default async function LoginPage(props: PageProps<"/login">) {
         <LoginForm next={redirectTo} />
 
         <p className="mt-6 text-center text-xs text-subtle">
-          Al usar Wish Links aceptás la{" "}
+          Al usar Wish Links aceptás los{" "}
+          <Link href="/terminos" className="underline transition hover:text-ink">
+            términos y condiciones
+          </Link>{" "}
+          y la{" "}
           <Link href="/privacidad" className="underline transition hover:text-ink">
             política de privacidad
           </Link>
