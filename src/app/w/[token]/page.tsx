@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Heart } from "lucide-react";
+import SharedItemLink from "@/components/shared-item-link";
 import { createClient } from "@/lib/supabase/server";
 import { formatPrice } from "@/lib/format";
 import type { SharedItem, SharedWishlist } from "@/lib/types";
@@ -84,10 +85,11 @@ function SharedCard({ item, showCategory }: { item: SharedItem; showCategory: bo
   const isStored = Boolean(item.image_url && SUPABASE_URL && item.image_url.startsWith(SUPABASE_URL));
 
   return (
-    <a
+    <SharedItemLink
       href={item.url}
-      target="_blank"
-      rel="noopener noreferrer"
+      domain={item.domain}
+      hasPrice={item.price_amount !== null}
+      scope={showCategory ? "all" : "category"}
       className="block overflow-hidden rounded-2xl border border-line bg-surface transition hover:shadow-md"
     >
       <div className="relative aspect-4/3 bg-stone-100">
@@ -135,6 +137,6 @@ function SharedCard({ item, showCategory }: { item: SharedItem; showCategory: bo
           </span>
         )}
       </div>
-    </a>
+    </SharedItemLink>
   );
 }

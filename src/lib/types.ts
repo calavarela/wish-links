@@ -32,9 +32,17 @@ export type Item = {
   status: ItemStatus;
   note: string | null;
   tags: string[];
+  /** Último clic al link desde la app. */
+  last_opened_at: string | null;
+  /** Lo pone un trigger al pasar a "bought"; se limpia si vuelve a otro estado. */
+  purchased_at: string | null;
+  /** Respuesta a "¿Lo compraste desde Wish Links?"; null = no contestó. */
+  purchase_source: PurchaseSource | null;
   created_at: string;
   updated_at: string;
 };
+
+export type PurchaseSource = "wish_links" | "other";
 
 /** Link público de solo lectura. `category_id` null = toda la lista. */
 export type ShareLink = {

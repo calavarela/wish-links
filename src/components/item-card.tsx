@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { Check, MoreHorizontal, Pencil, RotateCcw, Trash2, X } from "lucide-react";
 import posthog from "posthog-js";
-import { deleteItem, setItemStatus } from "@/app/actions";
+import { deleteItem, markItemOpened, setItemStatus } from "@/app/actions";
 import { formatPrice } from "@/lib/format";
-import type { Category, Item } from "@/lib/types";
+import type { Category, Item, PurchaseSource } from "@/lib/types";
+import Dialog from "./dialog";
 import EditItemDialog from "./edit-item-dialog";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
@@ -14,6 +15,8 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 export default function ItemCard({ item, categories }: { item: Item; categories: Category[] }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [askingSource, setAskingSource] = useState(false);
+  const closeAsk = useCallback(() => setAskingSource(false), []);
   const [pending, startTransition] = useTransition();
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -37,6 +40,30 @@ export default function ItemCard({ item, categories }: { item: Item; categories:
     });
   }
 
+  function trackOpen() {
+    posthog.capture("item_opened", {
+      domain: item.domain,
+      has_price: item.price_amount !== null,
+      status: item.status,
+    });
+    void markItemOpened(item.id);
+  }
+
+  function markBought(source: PurchaseSource | null) {
+    setAskingSource(false);
+    const daysSinceOpen = item.last_opened_at
+      ? Math.floor((Date.now() - new Date(item.last_opened_at).getTime()) / 86_400_000)
+      : null;
+    posthog.capture("item_status_changed", {
+      from_status: item.status,
+      to_status: "bought",
+      purchase_source: source ?? "unanswered",
+      opened_from_app: daysSinceOpen !== null,
+      days_since_last_open: daysSinceOpen,
+    });
+    run(() => setItemStatus(item.id, "bought", source));
+  }
+
   return (
     <>
       <article
@@ -49,13 +76,11 @@ export default function ItemCard({ item, categories }: { item: Item; categories:
           target="_blank"
           rel="noopener noreferrer"
           className="block"
-          onClick={() =>
-            posthog.capture("item_opened", {
-              domain: item.domain,
-              has_price: item.price_amount !== null,
-              status: item.status,
-            })
-          }
+          onClick={trackOpen}
+          // Clic con la rueda del mouse: abre en otra pestaña sin disparar onClick.
+          onAuxClick={(event) => {
+            if (event.button === 1) trackOpen();
+          }}
         >
           <div className="relative aspect-4/3 bg-stone-100">
             {item.image_url ? (
@@ -154,8 +179,8 @@ export default function ItemCard({ item, categories }: { item: Item; categories:
                     icon={<Check className="size-3.5" />}
                     label="Marcar comprado"
                     onClick={() => {
-                      posthog.capture("item_status_changed", { from_status: item.status, to_status: "bought" });
-                      run(() => setItemStatus(item.id, "bought"));
+                      setMenuOpen(false);
+                      setAskingSource(true);
                     }}
                   />
                   <MenuItem
@@ -199,6 +224,38 @@ export default function ItemCard({ item, categories }: { item: Item; categories:
         item={item}
         categories={categories}
       />
+
+      {/* Cerrar con la X o tocando afuera cancela: puede haber sido un toque sin querer. */}
+      <Dialog open={askingSource} onClose={closeAsk} title="¡Qué bueno que lo compraste!">
+        <div className="flex flex-col gap-4 p-5">
+          <p className="text-sm text-muted">
+            ¿Lo compraste entrando desde el link de Wish Links? Nos ayuda a saber si la app te sirve.
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => markBought("wish_links")}
+              className="flex-1 rounded-xl bg-ink px-4 py-2.5 text-sm font-medium text-white transition hover:bg-stone-700"
+            >
+              Sí, desde Wish Links
+            </button>
+            <button
+              type="button"
+              onClick={() => markBought("other")}
+              className="flex-1 rounded-xl border border-line px-4 py-2.5 text-sm font-medium transition hover:border-ink"
+            >
+              No, por otro lado
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={() => markBought(null)}
+            className="self-center text-xs text-subtle transition hover:text-ink"
+          >
+            Prefiero no responder
+          </button>
+        </div>
+      </Dialog>
     </>
   );
 }
