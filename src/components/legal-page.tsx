@@ -29,6 +29,8 @@ export function LegalPage({
       <p className="mt-6 text-sm leading-relaxed text-muted">{intro}</p>
 
       {children}
+
+      <p className="mt-10 text-xs text-subtle">© {new Date().getFullYear()} Wish Links</p>
     </main>
   );
 }

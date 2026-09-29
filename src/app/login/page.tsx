@@ -38,6 +38,7 @@ export default async function LoginPage(props: PageProps<"/login">) {
           </Link>
           .
         </p>
+        <p className="mt-2 text-center text-xs text-subtle">© {new Date().getFullYear()} Wish Links</p>
       </div>
     </main>
   );
