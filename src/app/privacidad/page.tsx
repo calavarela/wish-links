@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 };
 
 const CONTACT_EMAIL = "calavarela2004@gmail.com";
-const UPDATED = "27 de septiembre de 2026";
+const UPDATED = "29 de septiembre de 2026";
 
 export default function PrivacyPage() {
   return (
@@ -97,6 +97,12 @@ export default function PrivacyPage() {
           Por usar estos proveedores, tus datos pueden procesarse fuera de Argentina, en Brasil y
           en Estados Unidos.
         </p>
+        <p>
+          Si creás un link para compartir tu lista, cualquiera que lo tenga puede ver tus links
+          pendientes (título, imagen, precio y tienda) sin iniciar sesión. No ve tu email, tus
+          notas, tus etiquetas ni lo que ya compraste o descartaste. Podés desactivar el link
+          cuando quieras desde «Compartir lista».
+        </p>
       </Section>
 
       <Section title="Cookies y almacenamiento local">
@@ -146,7 +152,8 @@ export default function PrivacyPage() {
       <Section title="Seguridad">
         <p>
           La conexión al sitio está cifrada (HTTPS) y la base de datos está configurada para que
-          cada usuario solo pueda ver y modificar sus propios datos.
+          cada usuario solo pueda ver y modificar sus propios datos, salvo lo que elijas mostrar
+          con un link para compartir.
         </p>
       </Section>
 

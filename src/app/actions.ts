@@ -234,6 +234,42 @@ export async function deleteCategory(id: string) {
   revalidatePath("/");
 }
 
+/**
+ * Devuelve el token del link público de la lista (o de una categoría), creándolo
+ * si todavía no existe. Hay uno solo por alcance, así se puede reenviar el mismo.
+ */
+export async function getOrCreateShareLink(
+  categoryId: string | null,
+): Promise<{ token: string | null; error: string | null }> {
+  const supabase = await createClient();
+  await requireUser(supabase);
+
+  const existing = supabase.from("share_links").select("token");
+  const { data: found } = await (categoryId
+    ? existing.eq("category_id", categoryId)
+    : existing.is("category_id", null)
+  ).maybeSingle();
+  if (found) return { token: found.token, error: null };
+
+  const { data: created, error } = await supabase
+    .from("share_links")
+    .insert({ category_id: categoryId })
+    .select("token")
+    .single();
+  if (error || !created) return { token: null, error: "No se pudo crear el link. Probá de nuevo." };
+
+  revalidatePath("/");
+  return { token: created.token, error: null };
+}
+
+/** Desactiva el link: quien lo tenga deja de ver la lista. Uno nuevo sale con otro token. */
+export async function revokeShareLink(token: string) {
+  const supabase = await createClient();
+  await requireUser(supabase);
+  await supabase.from("share_links").delete().eq("token", token);
+  revalidatePath("/");
+}
+
 /** Borra imágenes, links, categorías y el usuario. No hay vuelta atrás. */
 export async function deleteAccount(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = await createClient();

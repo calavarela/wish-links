@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Category, Item, ItemStatus } from "@/lib/types";
+import type { Category, Item, ItemStatus, ShareLink } from "@/lib/types";
 import AccountFooter from "@/components/account-footer";
 import AppHeader from "@/components/app-header";
 import FilterBar from "@/components/filter-bar";
@@ -49,13 +49,15 @@ export default async function HomePage(props: PageProps<"/">) {
 
   // El volumen de una wishlist personal es chico: se trae todo una vez y se
   // filtra en memoria, así los contadores de cada chip salen gratis.
-  const [{ data: categories }, { data: allItems }] = await Promise.all([
+  const [{ data: categories }, { data: allItems }, { data: shareLinks }] = await Promise.all([
     supabase.from("categories").select("*").order("position"),
     supabase.from("items").select("*").order("created_at", { ascending: false }),
+    supabase.from("share_links").select("*"),
   ]);
 
   const categoryList = (categories ?? []) as Category[];
   const items = (allItems ?? []) as Item[];
+  const activeCategoryId = categoryList.some((c) => c.id === category) ? category : null;
 
   const visible = sortItems(
     items.filter((item) => {
@@ -73,7 +75,12 @@ export default async function HomePage(props: PageProps<"/">) {
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-7xl flex-col">
-      <AppHeader categories={categoryList} prefillUrl={prefillUrl} />
+      <AppHeader
+        categories={categoryList}
+        prefillUrl={prefillUrl}
+        shareLinks={(shareLinks ?? []) as ShareLink[]}
+        activeCategoryId={activeCategoryId}
+      />
 
       <FilterBar
         categories={categoryList}

@@ -2,24 +2,31 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Heart, LogOut, Plus, Search } from "lucide-react";
+import { Heart, LogOut, Plus, Search, Share2 } from "lucide-react";
 import posthog from "posthog-js";
 import { signOut } from "@/app/actions";
-import type { Category } from "@/lib/types";
+import type { Category, ShareLink } from "@/lib/types";
 import AddItemDialog from "./add-item-dialog";
+import ShareDialog from "./share-dialog";
 
 export default function AppHeader({
   categories,
   prefillUrl,
+  shareLinks,
+  activeCategoryId,
 }: {
   categories: Category[];
   prefillUrl: string | null;
+  shareLinks: ShareLink[];
+  activeCategoryId: string | null;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(searchParams.get("q") ?? "");
   const [adding, setAdding] = useState(Boolean(prefillUrl));
+  const [sharing, setSharing] = useState(false);
+  const closeShare = useCallback(() => setSharing(false), []);
   const isFirstRender = useRef(true);
 
   // Escribe la búsqueda en la URL con un respiro, para no navegar en cada tecla.
@@ -82,6 +89,16 @@ export default function AppHeader({
             <span className="hidden sm:block">Agregar</span>
           </button>
 
+          <button
+            type="button"
+            onClick={() => setSharing(true)}
+            aria-label="Compartir lista"
+            title="Compartir lista"
+            className="flex items-center rounded-xl border border-line p-2 text-muted transition hover:border-ink hover:text-ink"
+          >
+            <Share2 className="size-4" />
+          </button>
+
           <form
             action={signOut}
             onSubmit={() => {
@@ -106,6 +123,16 @@ export default function AppHeader({
         categories={categories}
         prefillUrl={prefillUrl}
       />
+
+      {sharing && (
+        <ShareDialog
+          open
+          onClose={closeShare}
+          categories={categories}
+          shareLinks={shareLinks}
+          initialCategoryId={activeCategoryId}
+        />
+      )}
     </>
   );
 }

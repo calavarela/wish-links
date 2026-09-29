@@ -36,6 +36,29 @@ export type Item = {
   updated_at: string;
 };
 
+/** Link público de solo lectura. `category_id` null = toda la lista. */
+export type ShareLink = {
+  id: string;
+  user_id: string;
+  category_id: string | null;
+  token: string;
+  created_at: string;
+};
+
+/** Lo que devuelve la función `get_shared_wishlist`: solo campos públicos, sin notas ni tags. */
+export type SharedItem = Pick<
+  Item,
+  "id" | "url" | "domain" | "title" | "image_url" | "favicon_url" | "price_amount" | "price_currency"
+> & {
+  category_name: string | null;
+  category_emoji: string | null;
+};
+
+export type SharedWishlist = {
+  category: { name: string; emoji: string | null } | null;
+  items: SharedItem[];
+};
+
 /** Lo que devuelve /api/preview al pegar un link. */
 export type LinkPreview = {
   url: string;

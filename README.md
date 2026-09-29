@@ -44,9 +44,18 @@ Las migraciones ya están aplicadas en el proyecto de Supabase:
 | ------------ | --------------------------------------------------------------------- |
 | `categories` | Categorías del usuario, con emoji y orden                             |
 | `items`      | Links guardados: url canónica, título, imagen, precio, estado, nota, tags |
+| `share_links` | Links públicos de solo lectura (toda la lista o una categoría), con token aleatorio |
 
 Al crearse un usuario nuevo, un trigger le carga las categorías iniciales
 (Ropa, Tecno, Casa, Regalos, Otros).
+
+## Compartir la lista
+
+El botón **Compartir lista** crea un link `/w/<token>` (de toda la lista o de una categoría)
+que se puede abrir sin cuenta. La página pública lee con la función `get_shared_wishlist`
+(`security definer`), que devuelve solo los items **pendientes** y solo campos públicos: sin
+notas, tags ni email. Las policies de `items` no cambian. Desactivar el link borra la fila y
+el token deja de funcionar.
 
 ## Guardar desde el celular
 
