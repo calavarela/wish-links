@@ -1,14 +1,17 @@
 import { Heart } from "lucide-react";
 import type { Category, Item } from "@/lib/types";
+import { isSameStore } from "@/lib/url";
 import ItemCard from "./item-card";
 
 export default function ItemGrid({
   items,
   categories,
+  storeDomains,
   hasAnyItem,
 }: {
   items: Item[];
   categories: Category[];
+  storeDomains: string[];
   hasAnyItem: boolean;
 }) {
   if (items.length === 0) {
@@ -38,7 +41,12 @@ export default function ItemGrid({
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
       {items.map((item) => (
-        <ItemCard key={item.id} item={item} categories={categories} />
+        <ItemCard
+          key={item.id}
+          item={item}
+          categories={categories}
+          storeSaved={storeDomains.some((domain) => isSameStore(item.domain, domain))}
+        />
       ))}
     </div>
   );

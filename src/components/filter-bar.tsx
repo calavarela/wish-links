@@ -2,7 +2,8 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Loader2, Settings2, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { Loader2, Settings2, Store as StoreIcon, Trash2 } from "lucide-react";
 import posthog from "posthog-js";
 import { createCategory, deleteCategory, type ActionState } from "@/app/actions";
 import type { Category, Item, ItemStatus } from "@/lib/types";
@@ -138,6 +139,14 @@ export default function FilterBar({
               </option>
             ))}
           </select>
+
+          <Link
+            href="/tiendas"
+            className="ml-auto flex items-center gap-1.5 rounded-lg border border-line bg-surface px-2 py-1 text-xs text-muted transition hover:border-ink hover:text-ink"
+          >
+            <StoreIcon className="size-3.5" />
+            Tiendas favoritas
+          </Link>
         </div>
       </div>
 

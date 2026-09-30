@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
-import { Check, MoreHorizontal, Pencil, RotateCcw, Trash2, X } from "lucide-react";
+import { Check, MoreHorizontal, Pencil, RotateCcw, Store as StoreIcon, Trash2, X } from "lucide-react";
 import posthog from "posthog-js";
-import { deleteItem, setItemStatus } from "@/app/actions";
+import { deleteItem, saveStoreFromItem, setItemStatus } from "@/app/actions";
 import { formatPrice } from "@/lib/format";
+import { isStoreDomain } from "@/lib/url";
 import { CURRENCIES, type Category, type Item, type PurchaseSource } from "@/lib/types";
 import Dialog from "./dialog";
 import EditItemDialog from "./edit-item-dialog";
@@ -13,7 +14,15 @@ import { fieldClass } from "./item-fields";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 
-export default function ItemCard({ item, categories }: { item: Item; categories: Category[] }) {
+export default function ItemCard({
+  item,
+  categories,
+  storeSaved,
+}: {
+  item: Item;
+  categories: Category[];
+  storeSaved: boolean;
+}) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [askingSource, setAskingSource] = useState(false);
@@ -217,6 +226,16 @@ export default function ItemCard({ item, categories }: { item: Item; categories:
                   onClick={() => {
                     posthog.capture("item_status_changed", { from_status: item.status, to_status: "pending" });
                     run(() => setItemStatus(item.id, "pending"));
+                  }}
+                />
+              )}
+              {!storeSaved && isStoreDomain(item.domain) && (
+                <MenuItem
+                  icon={<StoreIcon className="size-3.5" />}
+                  label="Guardar tienda"
+                  onClick={() => {
+                    posthog.capture("store_saved", { domain: item.domain, source: "item_menu" });
+                    run(() => saveStoreFromItem(item.id));
                   }}
                 />
               )}

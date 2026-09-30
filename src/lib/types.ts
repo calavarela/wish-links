@@ -49,6 +49,18 @@ export type Item = {
 
 export type PurchaseSource = "wish_links" | "other";
 
+/** Tienda guardada como favorita, tenga o no productos en la lista. */
+export type Store = {
+  id: string;
+  user_id: string;
+  /** Sin `www.`; es la clave para no repetirla y para cruzarla con los items. */
+  domain: string;
+  name: string;
+  url: string;
+  favicon_url: string | null;
+  created_at: string;
+};
+
 /** Link público de solo lectura. `category_id` null = toda la lista. */
 export type ShareLink = {
   id: string;

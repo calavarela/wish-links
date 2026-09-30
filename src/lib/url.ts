@@ -84,6 +84,50 @@ export function getDomain(url: string): string {
   }
 }
 
+/**
+ * Un item es de la tienda si comparten dominio o uno es subdominio del otro
+ * (ej: articulo.mercadolibre.com.ar y mercadolibre.com.ar).
+ */
+export function isSameStore(itemDomain: string | null, storeDomain: string): boolean {
+  if (!itemDomain) return false;
+  const a = itemDomain.toLowerCase();
+  const b = storeDomain.toLowerCase();
+  return a === b || a.endsWith(`.${b}`) || b.endsWith(`.${a}`);
+}
+
+/** Subdominios de sección, no de tienda: articulo.mercadolibre.com.ar es Mercado Libre. */
+const SECTION_SUBDOMAINS = new Set(["www", "m", "articulo", "listado", "produto", "lista", "shop", "tienda", "store"]);
+/** Plataformas donde cada tienda es un subdominio: ahí el nombre es el primer label. */
+const STORE_PLATFORMS = /\.(mitiendanube\.com|myshopify\.com|empretienda\.com\.ar|tiendanegocio\.com)$/i;
+const TLD_LABELS = new Set(["com", "net", "org", "co", "ar", "br", "mx", "cl", "uy", "es", "us", "uk", "io", "app", "shop", "store"]);
+
+/** Acortadores y links de compartir: el dominio no es el de la tienda. */
+const LINK_SHORTENERS = new Set(["share.google", "a.co", "amzn.to", "bit.ly", "t.co", "tinyurl.com", "meli.la", "linktr.ee", "l.instagram.com"]);
+
+export function isStoreDomain(domain: string | null): domain is string {
+  return Boolean(domain && domain.includes(".") && !LINK_SHORTENERS.has(domain.toLowerCase()));
+}
+
+/** Dominio con el que se guarda una tienda: sin www ni subdominios de sección. */
+export function storeDomain(url: string): string {
+  const labels = getDomain(url).toLowerCase().split(".");
+  while (labels.length > 2 && SECTION_SUBDOMAINS.has(labels[0])) labels.shift();
+  return labels.join(".");
+}
+
+/** Nombre de respaldo cuando la tienda no declara uno: "tricot.com.ar" → "Tricot". */
+export function storeNameFromDomain(domain: string): string {
+  const labels = domain.toLowerCase().split(".");
+  let label: string | undefined;
+  if (STORE_PLATFORMS.test(domain)) {
+    label = labels[0];
+  } else {
+    while (labels.length > 1 && TLD_LABELS.has(labels[labels.length - 1])) labels.pop();
+    label = labels[labels.length - 1];
+  }
+  return label ? label.charAt(0).toUpperCase() + label.slice(1) : domain;
+}
+
 export function faviconFor(url: string): string {
   const domain = getDomain(url);
   return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`;

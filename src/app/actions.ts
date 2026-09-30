@@ -5,13 +5,24 @@ import { redirect } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { CURRENCIES, type ItemStatus, type PurchaseSource } from "@/lib/types";
-import { canonicalizeUrl, faviconFor, getDomain, isPubliclyFetchable, normalizeUrlInput } from "@/lib/url";
+import { fetchPreview } from "@/lib/preview";
+import {
+  canonicalizeUrl,
+  faviconFor,
+  getDomain,
+  isPubliclyFetchable,
+  isStoreDomain,
+  normalizeUrlInput,
+  storeDomain,
+  storeNameFromDomain,
+} from "@/lib/url";
 
 /** `ok` se usa en el cliente para saber cuándo cerrar el diálogo; `saved` alimenta analytics. */
 export type ActionState = {
   error: string | null;
   ok?: boolean;
   saved?: { domain: string; has_price: boolean; has_category: boolean };
+  store?: { domain: string };
 };
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -254,6 +265,69 @@ export async function deleteCategory(id: string) {
   await requireUser(supabase);
   // Los items de esa categoría quedan sin categoría, no se borran.
   await supabase.from("categories").delete().eq("id", id);
+  revalidatePath("/");
+}
+
+/** Agrega una tienda favorita desde su link (sirve cualquier página de la tienda). */
+export async function addStore(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = await createClient();
+  await requireUser(supabase);
+
+  const input = normalizeUrlInput(String(formData.get("url") ?? ""));
+  const domain = input ? storeDomain(input) : "";
+  if (!input || !domain.includes(".")) return { error: "Ese link no parece válido." };
+  if (!isStoreDomain(domain)) return { error: "Ese es un link corto. Pegá el de la página de la tienda." };
+
+  const url = `https://${domain}`;
+  let name = text(formData.get("name"), 60);
+  if (!name && isPubliclyFetchable(url)) {
+    // El nombre que declara la tienda (og:site_name) suele ser mejor que el dominio.
+    const preview = await fetchPreview(url).catch(() => null);
+    name = preview?.siteName?.trim().slice(0, 60) || null;
+  }
+
+  const { error } = await supabase.from("stores").insert({
+    domain,
+    name: name ?? storeNameFromDomain(domain),
+    url,
+    favicon_url: faviconFor(url),
+  });
+
+  if (error) {
+    if (error.code === "23505") return { error: "Esa tienda ya está en tus favoritas." };
+    return { error: "No se pudo guardar la tienda. Probá de nuevo." };
+  }
+
+  revalidatePath("/tiendas");
+  revalidatePath("/");
+  return { error: null, ok: true, store: { domain } };
+}
+
+/** Guarda como favorita la tienda de un producto de la lista. Si ya estaba, no hace nada. */
+export async function saveStoreFromItem(itemId: string) {
+  const supabase = await createClient();
+  await requireUser(supabase);
+
+  const { data: item } = await supabase.from("items").select("url, site_name").eq("id", itemId).maybeSingle();
+  if (!item) return;
+
+  const domain = storeDomain(item.url);
+  if (!isStoreDomain(domain)) return;
+  const url = `https://${domain}`;
+  await supabase.from("stores").upsert(
+    { domain, name: item.site_name?.slice(0, 60) || storeNameFromDomain(domain), url, favicon_url: faviconFor(url) },
+    { onConflict: "user_id,domain", ignoreDuplicates: true },
+  );
+
+  revalidatePath("/tiendas");
+  revalidatePath("/");
+}
+
+export async function removeStore(id: string) {
+  const supabase = await createClient();
+  await requireUser(supabase);
+  await supabase.from("stores").delete().eq("id", id);
+  revalidatePath("/tiendas");
   revalidatePath("/");
 }
 

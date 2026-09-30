@@ -49,11 +49,13 @@ export default async function HomePage(props: PageProps<"/">) {
 
   // El volumen de una wishlist personal es chico: se trae todo una vez y se
   // filtra en memoria, así los contadores de cada chip salen gratis.
-  const [{ data: categories }, { data: allItems }, { data: shareLinks }] = await Promise.all([
+  const [{ data: categories }, { data: allItems }, { data: shareLinks }, { data: stores }] = await Promise.all([
     supabase.from("categories").select("*").order("position"),
     supabase.from("items").select("*").order("created_at", { ascending: false }),
     supabase.from("share_links").select("*"),
+    supabase.from("stores").select("domain"),
   ]);
+  const storeDomains = (stores ?? []).map((store) => store.domain as string);
 
   const categoryList = (categories ?? []) as Category[];
   const items = (allItems ?? []) as Item[];
@@ -109,7 +111,12 @@ export default async function HomePage(props: PageProps<"/">) {
           )}
         </p>
 
-        <ItemGrid items={visible} categories={categoryList} hasAnyItem={items.length > 0} />
+        <ItemGrid
+          items={visible}
+          categories={categoryList}
+          storeDomains={storeDomains}
+          hasAnyItem={items.length > 0}
+        />
       </main>
 
       <AccountFooter />

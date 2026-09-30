@@ -44,7 +44,7 @@ export default function PrivacyPage() {
             <>
               <strong className="text-ink">Lo que cargás:</strong> los links que guardás, con su
               título, descripción, precio, moneda, categoría, estado, notas y etiquetas, más las
-              categorías que creás y las imágenes de los productos (las que subís o las que
+              categorías que creás, las tiendas que guardás como favoritas y las imágenes de los productos (las que subís o las que
               copiamos de la tienda para que no se pierdan). De cada link también guardamos la
               última vez que lo abriste desde la app, cuándo lo marcaste como comprado y, si nos
               lo contás, cuánto pagaste y si lo compraste entrando desde Wish Links.
