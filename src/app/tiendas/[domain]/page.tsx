@@ -46,15 +46,19 @@ async function loadStore(rawDomain: string) {
   };
 }
 
-/** Suma montos solo si están todos en la misma moneda; sin cotización no tiene sentido mezclarlas. */
+/**
+ * Suma por moneda: sin cotización no tiene sentido mezclarlas, así que con
+ * varias queda "$ 120.000 + US$ 50". Null si no hay ningún monto.
+ */
 function total(entries: { amount: number | null; currency: string | null }[]): string | null {
-  const priced = entries.filter((e) => e.amount !== null);
-  const currencies = new Set(priced.map((e) => e.currency ?? "ARS"));
-  if (priced.length === 0 || currencies.size !== 1) return null;
-  return formatPrice(
-    priced.reduce((sum, e) => sum + Number(e.amount), 0),
-    [...currencies][0],
-  );
+  const sums = new Map<string, number>();
+  for (const { amount, currency } of entries) {
+    if (amount === null) continue;
+    const code = currency ?? "ARS";
+    sums.set(code, (sums.get(code) ?? 0) + Number(amount));
+  }
+  if (sums.size === 0) return null;
+  return [...sums].map(([code, sum]) => formatPrice(sum, code)).join(" + ");
 }
 
 export async function generateMetadata(props: PageProps<"/tiendas/[domain]">): Promise<Metadata> {
@@ -73,7 +77,22 @@ export default async function StorePage(props: PageProps<"/tiendas/[domain]">) {
   const pending = byStatus("pending");
   const bought = byStatus("bought");
   const pendingTotal = total(pending.map((i) => ({ amount: i.price_amount, currency: i.price_currency })));
-  const paidTotal = total(bought.map((i) => ({ amount: i.paid_amount, currency: i.paid_currency })));
+  // Lo que se pagó; si no lo cargó, el precio de lista es la mejor aproximación.
+  const spent = total(
+    bought.map((i) =>
+      i.paid_amount !== null
+        ? { amount: i.paid_amount, currency: i.paid_currency }
+        : { amount: i.price_amount, currency: i.price_currency },
+    ),
+  );
+  const estimated = bought.filter((i) => i.paid_amount === null && i.price_amount !== null).length;
+  const unknown = bought.filter((i) => i.paid_amount === null && i.price_amount === null).length;
+  const spentDetail = [
+    estimated > 0 && `${estimated} con precio de lista`,
+    unknown > 0 && `${unknown} sin precio`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const firstSaved = items.at(-1)?.created_at;
   const url = store?.url ?? `https://${domain}`;
 
@@ -110,8 +129,8 @@ export default async function StorePage(props: PageProps<"/tiendas/[domain]">) {
 
       <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="Pendientes" value={String(pending.length)} detail={pendingTotal} />
-        <Stat label="Comprados" value={String(bought.length)} detail={paidTotal ? `Pagaste ${paidTotal}` : null} />
-        <Stat label="Descartados" value={String(byStatus("discarded").length)} />
+        <Stat label="Comprados" value={String(bought.length)} />
+        <Stat label="Gastado" value={spent ?? "$ 0"} detail={spentDetail || null} />
         <Stat label="Primer guardado" value={firstSaved ? formatDate(firstSaved) : "—"} />
       </dl>
 
