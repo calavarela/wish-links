@@ -7,6 +7,7 @@ import { formatDate, formatPrice } from "@/lib/format";
 import type { Category, Item, ItemStatus, Store } from "@/lib/types";
 import { faviconFor, isSameStore, isStoreDomain, storeNameFromDomain } from "@/lib/url";
 import ItemCard from "@/components/item-card";
+import RenameStoreButton from "@/components/rename-store-button";
 import StoreFavoriteButton from "@/components/store-favorite-button";
 
 const DOMAIN = /^[a-z0-9-]+(\.[a-z0-9-]+)+$/;
@@ -89,7 +90,11 @@ export default async function StorePage(props: PageProps<"/tiendas/[domain]">) {
           <img src={store?.favicon_url ?? faviconFor(url)} alt="" className="size-6 rounded" />
         </div>
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-xl font-semibold tracking-tight">{name}</h1>
+          <div className="flex items-center gap-1">
+            <h1 className="truncate text-xl font-semibold tracking-tight">{name}</h1>
+            {/* Solo las favoritas tienen nombre propio; las demás lo toman del producto. */}
+            {store && <RenameStoreButton store={store} />}
+          </div>
           <a
             href={url}
             target="_blank"

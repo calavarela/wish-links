@@ -6,6 +6,7 @@ import { ExternalLink, Trash2 } from "lucide-react";
 import posthog from "posthog-js";
 import { removeStore } from "@/app/actions";
 import type { Store } from "@/lib/types";
+import RenameStoreButton from "./rename-store-button";
 
 export default function StoreCard({ store, pendingCount }: { store: Store; pendingCount: number }) {
   const [removing, startTransition] = useTransition();
@@ -40,6 +41,8 @@ export default function StoreCard({ store, pendingCount }: { store: Store; pendi
             : "sin productos guardados"}
         </span>
       </Link>
+
+      <RenameStoreButton store={store} />
 
       <a
         href={store.url}

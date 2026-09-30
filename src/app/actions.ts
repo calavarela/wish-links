@@ -331,6 +331,22 @@ export async function saveStoreFromItem(itemId: string) {
   revalidateLists();
 }
 
+export async function renameStore(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = await createClient();
+  await requireUser(supabase);
+
+  const id = text(formData.get("id"), 64);
+  const name = text(formData.get("name"), 60);
+  if (!id) return { error: "Falta la tienda a editar." };
+  if (!name) return { error: "Poné un nombre." };
+
+  const { error } = await supabase.from("stores").update({ name }).eq("id", id);
+  if (error) return { error: "No se pudo guardar el nombre." };
+
+  revalidateLists();
+  return { error: null, ok: true };
+}
+
 export async function removeStore(id: string) {
   const supabase = await createClient();
   await requireUser(supabase);
