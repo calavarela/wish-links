@@ -9,6 +9,7 @@ import type { Store } from "@/lib/types";
 
 export default function StoreCard({ store, pendingCount }: { store: Store; pendingCount: number }) {
   const [removing, startTransition] = useTransition();
+  const storePath = `/tiendas/${encodeURIComponent(store.domain)}`;
 
   function remove() {
     if (!confirm(`¿Quitar ${store.name} de tus tiendas favoritas?`)) return;
@@ -29,29 +30,28 @@ export default function StoreCard({ store, pendingCount }: { store: Store; pendi
         )}
       </div>
 
-      <div className="min-w-0 flex-1">
-        <a
-          href={store.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => posthog.capture("store_opened", { domain: store.domain })}
-          className="flex items-center gap-1.5 text-sm font-medium transition hover:text-brand"
-        >
-          <span className="truncate">{store.name}</span>
-          <ExternalLink className="size-3 shrink-0 text-subtle" />
-        </a>
-        <p className="truncate text-[11px] text-subtle">
+      <Link href={storePath} className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium transition hover:text-brand">{store.name}</span>
+        <span className="block truncate text-[11px] text-subtle">
           {store.domain}
           {" · "}
-          {pendingCount > 0 ? (
-            <Link href={`/?q=${encodeURIComponent(store.domain)}`} className="text-muted underline hover:text-ink">
-              {pendingCount} {pendingCount === 1 ? "producto pendiente" : "productos pendientes"}
-            </Link>
-          ) : (
-            "sin productos guardados"
-          )}
-        </p>
-      </div>
+          {pendingCount > 0
+            ? `${pendingCount} ${pendingCount === 1 ? "producto pendiente" : "productos pendientes"}`
+            : "sin productos guardados"}
+        </span>
+      </Link>
+
+      <a
+        href={store.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={() => posthog.capture("store_opened", { domain: store.domain })}
+        aria-label={`Ir a ${store.name}`}
+        title="Ir a la tienda"
+        className="rounded-lg p-1.5 text-subtle transition hover:bg-stone-100 hover:text-ink"
+      >
+        <ExternalLink className="size-3.5" />
+      </a>
 
       <button
         type="button"

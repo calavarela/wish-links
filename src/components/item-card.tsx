@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
-import { Check, MoreHorizontal, Pencil, RotateCcw, Store as StoreIcon, Trash2, X } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Check, MoreHorizontal, Pencil, RotateCcw, Star, Store as StoreIcon, Trash2, X } from "lucide-react";
 import posthog from "posthog-js";
 import { deleteItem, saveStoreFromItem, setItemStatus } from "@/app/actions";
 import { formatPrice } from "@/lib/format";
-import { isStoreDomain } from "@/lib/url";
+import { isStoreDomain, storeDomain } from "@/lib/url";
 import { CURRENCIES, type Category, type Item, type PurchaseSource } from "@/lib/types";
 import Dialog from "./dialog";
 import EditItemDialog from "./edit-item-dialog";
@@ -31,6 +32,9 @@ export default function ItemCard({
   const [paidCurrency, setPaidCurrency] = useState("ARS");
   const [pending, startTransition] = useTransition();
   const menuRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  const pathname = usePathname();
+  const storePath = `/tiendas/${encodeURIComponent(storeDomain(item.url))}`;
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -229,9 +233,19 @@ export default function ItemCard({
                   }}
                 />
               )}
-              {!storeSaved && isStoreDomain(item.domain) && (
+              {isStoreDomain(item.domain) && pathname !== storePath && (
                 <MenuItem
                   icon={<StoreIcon className="size-3.5" />}
+                  label="Ver tienda"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    router.push(storePath);
+                  }}
+                />
+              )}
+              {!storeSaved && isStoreDomain(item.domain) && (
+                <MenuItem
+                  icon={<Star className="size-3.5" />}
                   label="Guardar tienda"
                   onClick={() => {
                     posthog.capture("store_saved", { domain: item.domain, source: "item_menu" });

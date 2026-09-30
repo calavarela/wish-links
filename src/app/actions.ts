@@ -17,7 +17,7 @@ import {
   storeNameFromDomain,
 } from "@/lib/url";
 
-/** `ok` se usa en el cliente para saber cuándo cerrar el diálogo; `saved` alimenta analytics. */
+/** `ok` se usa en el cliente para saber cuÃ¡ndo cerrar el diÃ¡logo; `saved` alimenta analytics. */
 export type ActionState = {
   error: string | null;
   ok?: boolean;
@@ -34,6 +34,16 @@ const EXTENSIONS: Record<string, string> = {
   "image/avif": "avif",
 };
 
+/**
+ * Los items y las tiendas se ven en la lista, en /tiendas y en cada página de
+ * tienda: revalidar solo "/" dejaría las otras desactualizadas.
+ */
+function revalidateLists() {
+  revalidatePath("/");
+  revalidatePath("/tiendas");
+  revalidatePath("/tiendas/[domain]", "page");
+}
+
 async function requireUser(supabase: SupabaseClient) {
   const {
     data: { user },
@@ -43,7 +53,7 @@ async function requireUser(supabase: SupabaseClient) {
 }
 
 /**
- * Copia la imagen al Storage propio. Si la tienda después borra el producto o
+ * Copia la imagen al Storage propio. Si la tienda despuÃ©s borra el producto o
  * bloquea el hotlinking, la tarjeta se sigue viendo igual.
  */
 async function storeImage(
@@ -120,7 +130,7 @@ export async function createItem(_prev: ActionState, formData: FormData): Promis
   const user = await requireUser(supabase);
 
   const url = normalizeUrlInput(String(formData.get("url") ?? ""));
-  if (!url) return { error: "Ese link no parece válido." };
+  if (!url) return { error: "Ese link no parece vÃ¡lido." };
 
   const canonical = text(formData.get("canonicalUrl"), 2000) ?? canonicalizeUrl(url);
   const imageUrl = await storeImage(supabase, user.id, {
@@ -152,11 +162,11 @@ export async function createItem(_prev: ActionState, formData: FormData): Promis
   });
 
   if (error) {
-    if (error.code === "23505") return { error: "Ese link ya está guardado en tu lista." };
-    return { error: "No se pudo guardar. Probá de nuevo." };
+    if (error.code === "23505") return { error: "Ese link ya estÃ¡ guardado en tu lista." };
+    return { error: "No se pudo guardar. ProbÃ¡ de nuevo." };
   }
 
-  revalidatePath("/");
+  revalidateLists();
   return {
     error: null,
     ok: true,
@@ -194,7 +204,7 @@ export async function updateItem(_prev: ActionState, formData: FormData): Promis
 
   if (error) return { error: "No se pudo guardar el cambio." };
 
-  revalidatePath("/");
+  revalidateLists();
   return { error: null, ok: true };
 }
 
@@ -225,14 +235,14 @@ export async function setItemStatus(id: string, status: ItemStatus, purchase?: P
       paid_currency: paidAmount !== null ? paidCurrency : null,
     })
     .eq("id", id);
-  revalidatePath("/");
+  revalidateLists();
 }
 
 export async function deleteItem(id: string) {
   const supabase = await createClient();
   await requireUser(supabase);
   await supabase.from("items").delete().eq("id", id);
-  revalidatePath("/");
+  revalidateLists();
 }
 
 export async function createCategory(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -240,7 +250,7 @@ export async function createCategory(_prev: ActionState, formData: FormData): Pr
   const user = await requireUser(supabase);
 
   const name = text(formData.get("name"), 40);
-  if (!name) return { error: "Poné un nombre." };
+  if (!name) return { error: "PonÃ© un nombre." };
 
   const { count } = await supabase
     .from("categories")
@@ -254,29 +264,29 @@ export async function createCategory(_prev: ActionState, formData: FormData): Pr
     position: count ?? 0,
   });
 
-  if (error) return { error: "No se pudo crear la categoría." };
+  if (error) return { error: "No se pudo crear la categorÃ­a." };
 
-  revalidatePath("/");
+  revalidateLists();
   return { error: null, ok: true };
 }
 
 export async function deleteCategory(id: string) {
   const supabase = await createClient();
   await requireUser(supabase);
-  // Los items de esa categoría quedan sin categoría, no se borran.
+  // Los items de esa categorÃ­a quedan sin categorÃ­a, no se borran.
   await supabase.from("categories").delete().eq("id", id);
-  revalidatePath("/");
+  revalidateLists();
 }
 
-/** Agrega una tienda favorita desde su link (sirve cualquier página de la tienda). */
+/** Agrega una tienda favorita desde su link (sirve cualquier pÃ¡gina de la tienda). */
 export async function addStore(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = await createClient();
   await requireUser(supabase);
 
   const input = normalizeUrlInput(String(formData.get("url") ?? ""));
   const domain = input ? storeDomain(input) : "";
-  if (!input || !domain.includes(".")) return { error: "Ese link no parece válido." };
-  if (!isStoreDomain(domain)) return { error: "Ese es un link corto. Pegá el de la página de la tienda." };
+  if (!input || !domain.includes(".")) return { error: "Ese link no parece vÃ¡lido." };
+  if (!isStoreDomain(domain)) return { error: "Ese es un link corto. PegÃ¡ el de la pÃ¡gina de la tienda." };
 
   const url = `https://${domain}`;
   let name = text(formData.get("name"), 60);
@@ -294,12 +304,11 @@ export async function addStore(_prev: ActionState, formData: FormData): Promise<
   });
 
   if (error) {
-    if (error.code === "23505") return { error: "Esa tienda ya está en tus favoritas." };
-    return { error: "No se pudo guardar la tienda. Probá de nuevo." };
+    if (error.code === "23505") return { error: "Esa tienda ya estÃ¡ en tus favoritas." };
+    return { error: "No se pudo guardar la tienda. ProbÃ¡ de nuevo." };
   }
 
-  revalidatePath("/tiendas");
-  revalidatePath("/");
+  revalidateLists();
   return { error: null, ok: true, store: { domain } };
 }
 
@@ -319,21 +328,19 @@ export async function saveStoreFromItem(itemId: string) {
     { onConflict: "user_id,domain", ignoreDuplicates: true },
   );
 
-  revalidatePath("/tiendas");
-  revalidatePath("/");
+  revalidateLists();
 }
 
 export async function removeStore(id: string) {
   const supabase = await createClient();
   await requireUser(supabase);
   await supabase.from("stores").delete().eq("id", id);
-  revalidatePath("/tiendas");
-  revalidatePath("/");
+  revalidateLists();
 }
 
 /**
- * Devuelve el token del link público de la lista (o de una categoría), creándolo
- * si todavía no existe. Hay uno solo por alcance, así se puede reenviar el mismo.
+ * Devuelve el token del link pÃºblico de la lista (o de una categorÃ­a), creÃ¡ndolo
+ * si todavÃ­a no existe. Hay uno solo por alcance, asÃ­ se puede reenviar el mismo.
  */
 export async function getOrCreateShareLink(
   categoryId: string | null,
@@ -353,9 +360,9 @@ export async function getOrCreateShareLink(
     .insert({ category_id: categoryId })
     .select("token")
     .single();
-  if (error || !created) return { token: null, error: "No se pudo crear el link. Probá de nuevo." };
+  if (error || !created) return { token: null, error: "No se pudo crear el link. ProbÃ¡ de nuevo." };
 
-  revalidatePath("/");
+  revalidateLists();
   return { token: created.token, error: null };
 }
 
@@ -364,35 +371,35 @@ export async function revokeShareLink(token: string) {
   const supabase = await createClient();
   await requireUser(supabase);
   await supabase.from("share_links").delete().eq("token", token);
-  revalidatePath("/");
+  revalidateLists();
 }
 
-/** Borra imágenes, links, categorías y el usuario. No hay vuelta atrás. */
+/** Borra imÃ¡genes, links, categorÃ­as y el usuario. No hay vuelta atrÃ¡s. */
 export async function deleteAccount(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = await createClient();
   const user = await requireUser(supabase);
 
   if (text(formData.get("confirmation"), 20)?.toUpperCase() !== "ELIMINAR") {
-    return { error: "Escribí ELIMINAR para confirmar." };
+    return { error: "EscribÃ­ ELIMINAR para confirmar." };
   }
 
-  // Los archivos del Storage no caen con el usuario, así que se borran primero.
+  // Los archivos del Storage no caen con el usuario, asÃ­ que se borran primero.
   const bucket = supabase.storage.from("previews");
   for (let round = 0; round < 50; round++) {
     const { data: files, error: listError } = await bucket.list(user.id, { limit: 100 });
-    if (listError) return { error: "No se pudieron borrar tus imágenes. Probá de nuevo." };
+    if (listError) return { error: "No se pudieron borrar tus imÃ¡genes. ProbÃ¡ de nuevo." };
     if (!files?.length) break;
 
     const { data: removed, error: removeError } = await bucket.remove(
       files.map((file) => `${user.id}/${file.name}`),
     );
     if (removeError || !removed?.length) {
-      return { error: "No se pudieron borrar tus imágenes. Probá de nuevo." };
+      return { error: "No se pudieron borrar tus imÃ¡genes. ProbÃ¡ de nuevo." };
     }
   }
 
   const { error } = await supabase.rpc("delete_own_account");
-  if (error) return { error: "No se pudo eliminar la cuenta. Probá de nuevo." };
+  if (error) return { error: "No se pudo eliminar la cuenta. ProbÃ¡ de nuevo." };
 
   await supabase.auth.signOut({ scope: "local" });
   redirect("/login?deleted=1");
