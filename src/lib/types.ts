@@ -61,6 +61,17 @@ export type PriceHistoryEntry = {
   recorded_at: string;
 };
 
+/** Aviso dentro de la app. Lo crea un trigger cuando el chequeo diario detecta una baja. */
+export type AppNotification = {
+  id: string;
+  item_id: string | null;
+  type: "price_drop";
+  data: { previous_amount: number; amount: number; currency: string | null };
+  created_at: string;
+  read_at: string | null;
+  item: Pick<Item, "id" | "title" | "url" | "domain" | "image_url" | "favicon_url"> | null;
+};
+
 export type PurchaseSource = "wish_links" | "other";
 
 /** Tienda guardada como favorita, tenga o no productos en la lista. */

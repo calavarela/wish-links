@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Category, Item, ItemStatus, ShareLink } from "@/lib/types";
+import type { AppNotification, Category, Item, ItemStatus, ShareLink } from "@/lib/types";
 import AccountFooter from "@/components/account-footer";
 import AppHeader from "@/components/app-header";
 import FilterBar from "@/components/filter-bar";
@@ -49,12 +49,18 @@ export default async function HomePage(props: PageProps<"/">) {
 
   // El volumen de una wishlist personal es chico: se trae todo una vez y se
   // filtra en memoria, así los contadores de cada chip salen gratis.
-  const [{ data: categories }, { data: allItems }, { data: shareLinks }, { data: stores }] = await Promise.all([
-    supabase.from("categories").select("*").order("position"),
-    supabase.from("items").select("*").order("created_at", { ascending: false }),
-    supabase.from("share_links").select("*"),
-    supabase.from("stores").select("domain"),
-  ]);
+  const [{ data: categories }, { data: allItems }, { data: shareLinks }, { data: stores }, { data: notifications }] =
+    await Promise.all([
+      supabase.from("categories").select("*").order("position"),
+      supabase.from("items").select("*").order("created_at", { ascending: false }),
+      supabase.from("share_links").select("*"),
+      supabase.from("stores").select("domain"),
+      supabase
+        .from("notifications")
+        .select("id, item_id, type, data, created_at, read_at, item:items(id, title, url, domain, image_url, favicon_url)")
+        .order("created_at", { ascending: false })
+        .limit(30),
+    ]);
   const storeDomains = (stores ?? []).map((store) => store.domain as string);
 
   const categoryList = (categories ?? []) as Category[];
@@ -82,6 +88,7 @@ export default async function HomePage(props: PageProps<"/">) {
         prefillUrl={prefillUrl}
         shareLinks={(shareLinks ?? []) as ShareLink[]}
         activeCategoryId={activeCategoryId}
+        notifications={(notifications ?? []) as unknown as AppNotification[]}
       />
 
       <FilterBar

@@ -82,6 +82,14 @@ nuevo con la etiqueta de % de suba o baja.
 - La ruta pide `Authorization: Bearer $CRON_SECRET` y usa `SUPABASE_SERVICE_ROLE_KEY`
   (`src/lib/supabase/admin.ts`), así que las dos variables tienen que estar en Vercel.
 
+## Notificaciones
+
+La campanita del header abre los avisos de la tabla `notifications`. Hoy hay un solo tipo,
+`price_drop`: lo crea el trigger `notify_price_drop` cuando el chequeo diario baja el precio
+de un item pendiente (una edición a mano no avisa). Cada aviso guarda en `data` el precio
+anterior, el nuevo y la moneda de ese momento, y hay uno solo sin leer por item. Al abrir el
+panel se marcan como leídos. La usuaria puede leerlos, marcarlos y borrarlos, pero no crearlos.
+
 ## Guardar desde el celular
 
 `public/manifest.json` declara un `share_target`: al instalar la web como app en Android,

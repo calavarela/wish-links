@@ -390,6 +390,21 @@ export async function revokeShareLink(token: string) {
   revalidateLists();
 }
 
+/** Se llama al abrir el panel de notificaciones: todo lo que estaba sin leer pasa a leído. */
+export async function markNotificationsRead() {
+  const supabase = await createClient();
+  await requireUser(supabase);
+  await supabase.from("notifications").update({ read_at: new Date().toISOString() }).is("read_at", null);
+  revalidatePath("/");
+}
+
+export async function clearNotifications() {
+  const supabase = await createClient();
+  const user = await requireUser(supabase);
+  await supabase.from("notifications").delete().eq("user_id", user.id);
+  revalidatePath("/");
+}
+
 /** Borra imágenes, links, categorías y el usuario. No hay vuelta atrás. */
 export async function deleteAccount(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = await createClient();

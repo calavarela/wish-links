@@ -5,8 +5,9 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Heart, LogOut, Plus, Search, Share2 } from "lucide-react";
 import posthog from "posthog-js";
 import { signOut } from "@/app/actions";
-import type { Category, ShareLink } from "@/lib/types";
+import type { AppNotification, Category, ShareLink } from "@/lib/types";
 import AddItemDialog from "./add-item-dialog";
+import NotificationsButton from "./notifications-button";
 import ShareDialog from "./share-dialog";
 
 export default function AppHeader({
@@ -14,11 +15,13 @@ export default function AppHeader({
   prefillUrl,
   shareLinks,
   activeCategoryId,
+  notifications,
 }: {
   categories: Category[];
   prefillUrl: string | null;
   shareLinks: ShareLink[];
   activeCategoryId: string | null;
+  notifications: AppNotification[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -88,6 +91,8 @@ export default function AppHeader({
             <Plus className="size-4" />
             <span className="hidden sm:block">Agregar</span>
           </button>
+
+          <NotificationsButton notifications={notifications} />
 
           <button
             type="button"
