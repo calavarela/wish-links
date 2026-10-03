@@ -66,6 +66,22 @@ afiliados, que se activa con su variable de entorno (por ahora `AMAZON_ASSOCIATE
 base siempre queda el link original. La ruta solo redirige a URLs guardadas, así que no sirve
 como redirección abierta.
 
+## Historial de precios
+
+Un Vercel Cron (`vercel.json`) llama una vez por día a `/api/cron/prices`, que vuelve a leer
+la página de los items **pendientes** (primero los que hace más que no se revisan) con el
+mismo `fetchPreview`. Si el precio cambió y está en la misma moneda, actualiza
+`price_amount` y guarda el anterior en `previous_price_amount`: la tarjeta muestra el precio
+nuevo con la etiqueta de % de suba o baja.
+
+- Cada precio que tuvo un item queda en `price_history`, que escribe un trigger de `items`
+  (también al crear el item y al editar el precio a mano). La usuaria solo puede leerla.
+- Si el precio se edita a mano, otro trigger borra `previous_price_amount`: una corrección no
+  es una baja de precio.
+- El historial se ve al editar el item, cuando hubo al menos un cambio.
+- La ruta pide `Authorization: Bearer $CRON_SECRET` y usa `SUPABASE_SERVICE_ROLE_KEY`
+  (`src/lib/supabase/admin.ts`), así que las dos variables tienen que estar en Vercel.
+
 ## Guardar desde el celular
 
 `public/manifest.json` declara un `share_target`: al instalar la web como app en Android,

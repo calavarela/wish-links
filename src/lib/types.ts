@@ -43,8 +43,22 @@ export type Item = {
   /** Lo que terminó pagando, si lo contó al marcar comprado. */
   paid_amount: number | null;
   paid_currency: string | null;
+  /** Precio antes del último cambio que detectó el chequeo diario. Una edición a mano lo limpia. */
+  previous_price_amount: number | null;
+  price_changed_at: string | null;
+  /** Última vez que el chequeo diario leyó la página. */
+  price_checked_at: string | null;
   created_at: string;
   updated_at: string;
+};
+
+/** Cada precio que tuvo un item. Lo escribe un trigger de `items`. */
+export type PriceHistoryEntry = {
+  id: number;
+  item_id: string;
+  amount: number;
+  currency: string | null;
+  recorded_at: string;
 };
 
 export type PurchaseSource = "wish_links" | "other";

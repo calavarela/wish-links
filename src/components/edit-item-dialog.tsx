@@ -7,6 +7,7 @@ import { updateItem, type ActionState } from "@/app/actions";
 import type { Category, Item } from "@/lib/types";
 import Dialog from "./dialog";
 import ItemFields from "./item-fields";
+import PriceHistory from "./price-history";
 
 const EMPTY: ActionState = { error: null };
 
@@ -65,6 +66,8 @@ export default function EditItemDialog({
             tags: item.tags,
           }}
         />
+
+        {open && <PriceHistory itemId={item.id} currency={item.price_currency} />}
 
         {state.error && (
           <p className="flex items-center gap-2 rounded-lg bg-brand-soft px-3 py-2 text-xs text-brand">

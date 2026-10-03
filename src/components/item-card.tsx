@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Check, MoreHorizontal, Pencil, RotateCcw, Star, Store as StoreIcon, Trash2, X } from "lucide-react";
 import posthog from "posthog-js";
 import { deleteItem, saveStoreFromItem, setItemStatus } from "@/app/actions";
-import { formatPrice } from "@/lib/format";
+import { formatPct, formatPrice, priceChangePct } from "@/lib/format";
 import { isStoreDomain, storeDomain } from "@/lib/url";
 import { CURRENCIES, type Category, type Item, type PurchaseSource } from "@/lib/types";
 import Dialog from "./dialog";
@@ -46,6 +46,7 @@ export default function ItemCard({
   }, [menuOpen]);
 
   const price = formatPrice(item.price_amount, item.price_currency);
+  const changePct = priceChangePct(item.price_amount, item.previous_price_amount);
   const paid = formatPrice(item.paid_amount, item.paid_currency);
   const isStored = Boolean(item.image_url && SUPABASE_URL && item.image_url.startsWith(SUPABASE_URL));
   const category = categories.find((c) => c.id === item.category_id);
@@ -163,7 +164,21 @@ export default function ItemCard({
               {item.title || item.url}
             </h3>
 
-            {price && <p className="text-sm font-semibold">{price}</p>}
+            {price && (
+              <p className="flex items-center gap-1.5 text-sm font-semibold">
+                {price}
+                {changePct !== null && (
+                  <span
+                    title={`Antes ${formatPrice(item.previous_price_amount, item.price_currency)}`}
+                    className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                      changePct < 0 ? "bg-emerald-100 text-emerald-700" : "bg-brand-soft text-brand"
+                    }`}
+                  >
+                    {formatPct(changePct)}
+                  </span>
+                )}
+              </p>
+            )}
 
             {item.status === "bought" && paid && <p className="text-xs text-muted">Pagaste {paid}</p>}
 
