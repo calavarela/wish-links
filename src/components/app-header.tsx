@@ -63,16 +63,17 @@ export default function AppHeader({
 
   return (
     <>
-      <header className="sticky top-0 z-30 border-b border-line bg-canvas/85 px-4 py-3 backdrop-blur sm:px-6">
-        <div className="flex items-center gap-3">
+      <header className="border-b border-line bg-canvas/85 px-4 py-3 backdrop-blur sm:px-6">
+        {/* En el celu no entran el buscador y los botones en una fila: el buscador baja a la segunda. */}
+        <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-3">
           <div className="flex items-center gap-2">
             <div className="flex size-8 items-center justify-center rounded-xl bg-brand-soft">
               <Heart className="size-4 text-brand" strokeWidth={2.4} />
             </div>
-            <span className="hidden text-sm font-semibold tracking-tight sm:block">Wish Links</span>
+            <span className="text-sm font-semibold tracking-tight">Wish Links</span>
           </div>
 
-          <div className="relative flex-1">
+          <div className="relative order-last w-full sm:order-none sm:w-auto sm:min-w-0 sm:flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-subtle" />
             <input
               type="search"
@@ -86,7 +87,7 @@ export default function AppHeader({
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="flex items-center gap-1.5 rounded-xl bg-ink px-3 py-2 text-sm font-medium text-white transition hover:bg-stone-700"
+            className="ml-auto flex items-center gap-1.5 rounded-xl bg-ink px-3 py-2 text-sm font-medium text-white transition hover:bg-stone-700 sm:ml-0"
           >
             <Plus className="size-4" />
             <span className="hidden sm:block">Agregar</span>

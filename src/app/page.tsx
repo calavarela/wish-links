@@ -83,21 +83,24 @@ export default async function HomePage(props: PageProps<"/">) {
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-7xl flex-col">
-      <AppHeader
-        categories={categoryList}
-        prefillUrl={prefillUrl}
-        shareLinks={(shareLinks ?? []) as ShareLink[]}
-        activeCategoryId={activeCategoryId}
-        notifications={(notifications ?? []) as unknown as AppNotification[]}
-      />
+      {/* Header y filtros quedan fijos juntos: así no importa cuánto mida el header en cada pantalla. */}
+      <div className="sticky top-0 z-30">
+        <AppHeader
+          categories={categoryList}
+          prefillUrl={prefillUrl}
+          shareLinks={(shareLinks ?? []) as ShareLink[]}
+          activeCategoryId={activeCategoryId}
+          notifications={(notifications ?? []) as unknown as AppNotification[]}
+        />
 
-      <FilterBar
-        categories={categoryList}
-        items={items}
-        activeCategory={category}
-        activeStatus={status}
-        activeSort={sort}
-      />
+        <FilterBar
+          categories={categoryList}
+          items={items}
+          activeCategory={category}
+          activeStatus={status}
+          activeSort={sort}
+        />
+      </div>
 
       <main className="flex-1 px-4 pb-24 sm:px-6">
         <p className="mb-4 text-xs text-muted">

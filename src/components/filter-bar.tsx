@@ -70,7 +70,7 @@ export default function FilterBar({
 
   return (
     <>
-      <div className="sticky top-[57px] z-20 flex flex-col gap-2 bg-canvas/85 px-4 pb-3 pt-3 backdrop-blur sm:px-6">
+      <div className="flex flex-col gap-2 bg-canvas/85 px-4 pb-3 pt-3 backdrop-blur sm:px-6">
         <div className="flex items-center gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <button
             type="button"
