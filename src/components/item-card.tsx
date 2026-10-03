@@ -100,9 +100,11 @@ export default function ItemCard({
   return (
     <>
       <article
-        className={`group relative overflow-hidden rounded-2xl border border-line bg-surface transition hover:shadow-md ${
-          pending ? "opacity-50" : ""
-        } ${item.status !== "pending" ? "opacity-75" : ""}`}
+        // Sin overflow-hidden acá: recortaría el menú, que es más ancho que la tarjeta en el celu.
+        // Con el menú abierto la tarjeta pasa adelante, así no la tapan las de la fila siguiente.
+        className={`group relative rounded-2xl border border-line bg-surface transition hover:shadow-md ${
+          menuOpen ? "z-20" : ""
+        } ${pending ? "opacity-50" : ""} ${item.status !== "pending" ? "opacity-75" : ""}`}
       >
         <a
           href={`/go/${item.id}`}
@@ -115,7 +117,7 @@ export default function ItemCard({
             if (event.button === 1) trackOpen();
           }}
         >
-          <div className="relative aspect-4/3 bg-stone-100">
+          <div className="relative aspect-4/3 overflow-hidden rounded-t-2xl bg-stone-100">
             {item.image_url ? (
               isStored ? (
                 <Image
@@ -207,13 +209,13 @@ export default function ItemCard({
             type="button"
             aria-label="Opciones"
             onClick={() => setMenuOpen((open) => !open)}
-            className="flex size-7 items-center justify-center rounded-lg bg-surface/90 text-muted shadow-sm backdrop-blur transition hover:text-ink sm:opacity-0 sm:group-hover:opacity-100"
+            className="flex size-7 items-center justify-center rounded-lg bg-surface/90 text-muted shadow-sm backdrop-blur transition hover:text-ink"
           >
             <MoreHorizontal className="size-4" />
           </button>
 
           {menuOpen && (
-            <div className="absolute right-0 top-8 z-10 w-44 overflow-hidden rounded-xl border border-line bg-surface py-1 shadow-lg">
+            <div className="absolute right-0 top-8 z-10 w-40 overflow-hidden rounded-xl border border-line bg-surface py-1 shadow-lg">
               <MenuItem
                 icon={<Pencil className="size-3.5" />}
                 label="Editar"
