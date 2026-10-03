@@ -205,8 +205,11 @@ function parseHtml(html: string, requestedUrl: string, finalUrl: string): LinkPr
 
   const siteName = meta('meta[property="og:site_name"]') ?? null;
 
+  // Tiendanube pone el precio tachado (compare_at) en el JSON-LD cuando hay
+  // promo; el que se paga está solo en esta meta propia.
   let price = parsePrice(
-    meta('meta[property="product:price:amount"]') ??
+    meta('meta[property="tiendanube:price"]') ??
+      meta('meta[property="product:price:amount"]') ??
       meta('meta[property="og:price:amount"]') ??
       meta('meta[itemprop="price"]') ??
       $('[itemprop="price"]').first().attr("content") ??
