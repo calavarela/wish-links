@@ -20,7 +20,7 @@ export default function StoreCard({ store, pendingCount }: { store: Store; pendi
 
   return (
     <li
-      className={`flex items-center gap-3 rounded-2xl border border-line bg-surface p-3 transition ${
+      className={`flex min-w-0 items-center gap-3 rounded-2xl border border-line bg-surface p-3 transition ${
         removing ? "opacity-50" : ""
       }`}
     >

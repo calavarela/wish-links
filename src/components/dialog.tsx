@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useSyncExternalStore, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
+
+const noopSubscribe = () => () => {};
 
 export default function Dialog({
   open,
@@ -31,9 +34,14 @@ export default function Dialog({
     };
   }, [open, onClose]);
 
-  if (!open) return null;
+  // En el servidor no hay document; en el cliente es true desde la hidratación.
+  const isClient = useSyncExternalStore(noopSubscribe, () => true, () => false);
 
-  return (
+  if (!open || !isClient) return null;
+
+  // Va directo al body: un ancestro con backdrop-blur (el header) haría que el
+  // `fixed` se ubique respecto de él y no de la pantalla.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
       <div
         className="absolute inset-0 bg-stone-900/40 backdrop-blur-[2px]"
@@ -59,6 +67,7 @@ export default function Dialog({
         </header>
         <div className="overflow-y-auto">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

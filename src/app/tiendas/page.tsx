@@ -46,7 +46,7 @@ export default async function StoresPage() {
           </p>
         </div>
       ) : (
-        <ul className="mt-6 grid gap-3 sm:grid-cols-2">
+        <ul className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
           {storeList.map((store) => (
             <StoreCard
               key={store.id}
