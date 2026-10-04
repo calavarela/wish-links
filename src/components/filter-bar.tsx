@@ -1,9 +1,9 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Loader2, Settings2, Store as StoreIcon, Trash2 } from "lucide-react";
+import { Funnel, Loader2, Settings2, Store as StoreIcon, Trash2 } from "lucide-react";
 import posthog from "posthog-js";
 import { createCategory, deleteCategory, type ActionState } from "@/app/actions";
 import type { Category, Item, ItemStatus } from "@/lib/types";
@@ -52,6 +52,15 @@ export default function FilterBar({
     const params = new URLSearchParams(searchParams);
     if (value) params.set(key, value);
     else params.delete(key);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }
+
+  // Una sola navegación: dos setParam seguidos partirían de la misma URL y el segundo pisaría al primero.
+  function resetFilters() {
+    posthog.capture("filter_applied", { filter: "reset", selection: "default" });
+    const params = new URLSearchParams(searchParams);
+    params.delete("status");
+    params.delete("sort");
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }
 
@@ -116,29 +125,7 @@ export default function FilterBar({
         </div>
 
         <div className="flex items-center gap-2">
-          <select
-            value={activeStatus}
-            onChange={(event) => setParam("status", event.target.value === "pending" ? null : event.target.value)}
-            className="rounded-lg border border-line bg-surface px-2 py-1 text-xs text-muted outline-none focus:border-ink"
-          >
-            {STATUS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={activeSort}
-            onChange={(event) => setParam("sort", event.target.value === "recent" ? null : event.target.value)}
-            className="rounded-lg border border-line bg-surface px-2 py-1 text-xs text-muted outline-none focus:border-ink"
-          >
-            {SORT_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+          <FiltersMenu activeStatus={activeStatus} activeSort={activeSort} setParam={setParam} onReset={resetFilters} />
 
           <Link
             href="/tiendas"
@@ -157,6 +144,117 @@ export default function FilterBar({
         countFor={countFor}
       />
     </>
+  );
+}
+
+/** Estado y orden en un solo botón: el número cuenta lo que no está en su valor por defecto. */
+function FiltersMenu({
+  activeStatus,
+  activeSort,
+  setParam,
+  onReset,
+}: {
+  activeStatus: ItemStatus | "all";
+  activeSort: string;
+  setParam: (key: string, value: string | null) => void;
+  onReset: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const changed = Number(activeStatus !== "pending") + Number(activeSort !== "recent");
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!ref.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  const optionClass = (active: boolean) =>
+    `rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+      active ? "border-ink bg-ink text-white" : "border-line bg-surface text-muted hover:border-ink hover:text-ink"
+    }`;
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        aria-label={changed ? `Filtros (${changed} activos)` : "Filtros"}
+        title="Filtros"
+        className={`relative flex items-center rounded-lg border bg-surface p-1.5 transition hover:border-ink hover:text-ink ${
+          changed ? "border-ink text-ink" : "border-line text-muted"
+        }`}
+      >
+        <Funnel className="size-3.5" />
+        {changed > 0 && (
+          <span className="absolute -right-1.5 -top-1.5 flex size-4 items-center justify-center rounded-full bg-ink text-[10px] font-semibold text-white">
+            {changed}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-9 z-10 flex w-72 max-w-[calc(100vw-2rem)] flex-col gap-4 rounded-2xl border border-line bg-surface p-4 shadow-lg">
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-2 text-xs font-medium text-subtle">Estado</legend>
+            <div className="flex flex-wrap gap-1.5">
+              {STATUS_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  aria-pressed={activeStatus === option.value}
+                  className={optionClass(activeStatus === option.value)}
+                  onClick={() => setParam("status", option.value === "pending" ? null : option.value)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-2 text-xs font-medium text-subtle">Ordenar por</legend>
+            <div className="flex flex-wrap gap-1.5">
+              {SORT_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  aria-pressed={activeSort === option.value}
+                  className={optionClass(activeSort === option.value)}
+                  onClick={() => setParam("sort", option.value === "recent" ? null : option.value)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+
+          {changed > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                onReset();
+                setOpen(false);
+              }}
+              className="self-start text-xs text-subtle transition hover:text-ink"
+            >
+              Restablecer
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
