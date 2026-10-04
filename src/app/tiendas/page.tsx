@@ -15,7 +15,7 @@ export default async function StoresPage() {
   const supabase = await createClient();
   const [{ data: stores }, { data: items }] = await Promise.all([
     supabase.from("stores").select("*").order("name"),
-    supabase.from("items").select("domain, status"),
+    supabase.from("items").select("domain, status").is("shared_list_id", null),
   ]);
 
   const storeList = (stores ?? []) as Store[];

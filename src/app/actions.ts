@@ -21,7 +21,7 @@ import {
 export type ActionState = {
   error: string | null;
   ok?: boolean;
-  saved?: { domain: string; has_price: boolean; has_category: boolean };
+  saved?: { domain: string; has_price: boolean; has_category: boolean; shared_list: boolean };
   store?: { domain: string };
 };
 
@@ -35,13 +35,15 @@ const EXTENSIONS: Record<string, string> = {
 };
 
 /**
- * Los items y las tiendas se ven en la lista, en /tiendas y en cada página de
- * tienda: revalidar solo "/" dejaría las otras desactualizadas.
+ * Los items y las tiendas se ven en la lista, en /tiendas, en cada página de
+ * tienda y en las listas compartidas: revalidar solo "/" dejaría las otras desactualizadas.
  */
 function revalidateLists() {
   revalidatePath("/");
   revalidatePath("/tiendas");
   revalidatePath("/tiendas/[domain]", "page");
+  revalidatePath("/listas");
+  revalidatePath("/listas/[id]", "page");
 }
 
 async function requireUser(supabase: SupabaseClient) {
@@ -143,13 +145,16 @@ export async function createItem(_prev: ActionState, formData: FormData): Promis
     remoteUrl: text(formData.get("imageUrl"), 2000),
   });
 
-  const categoryId = text(formData.get("categoryId"), 64);
+  // En una lista compartida no hay categorías (son personales); la policy valida que sea miembro.
+  const sharedListId = text(formData.get("sharedListId"), 64);
+  const categoryId = sharedListId ? null : text(formData.get("categoryId"), 64);
   const status = (text(formData.get("status"), 16) ?? "pending") as ItemStatus;
   const domain = getDomain(url);
   const priceAmount = parseAmount(formData.get("priceAmount"));
 
   const { error } = await supabase.from("items").insert({
     user_id: user.id,
+    shared_list_id: sharedListId,
     category_id: categoryId,
     url,
     canonical_url: canonical,
@@ -168,7 +173,9 @@ export async function createItem(_prev: ActionState, formData: FormData): Promis
   });
 
   if (error) {
-    if (error.code === "23505") return { error: "Ese link ya está guardado en tu lista." };
+    if (error.code === "23505") {
+      return { error: sharedListId ? "Ese link ya está en esta lista." : "Ese link ya está guardado en tu lista." };
+    }
     return { error: "No se pudo guardar. Probá de nuevo." };
   }
 
@@ -176,7 +183,7 @@ export async function createItem(_prev: ActionState, formData: FormData): Promis
   return {
     error: null,
     ok: true,
-    saved: { domain, has_price: priceAmount !== null, has_category: categoryId !== null },
+    saved: { domain, has_price: priceAmount !== null, has_category: categoryId !== null, shared_list: Boolean(sharedListId) },
   };
 }
 
@@ -394,6 +401,102 @@ export async function revokeShareLink(token: string) {
   await requireUser(supabase);
   await supabase.from("share_links").delete().eq("token", token);
   revalidateLists();
+}
+
+// ── Listas compartidas ────────────────────────────────────────────────────────
+// Los permisos los hacen cumplir las policies: acá solo se valida la forma.
+
+export async function createSharedList(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = await createClient();
+  await requireUser(supabase);
+
+  const name = text(formData.get("name"), 60);
+  if (!name) return { error: "Poné un nombre." };
+
+  const { data, error } = await supabase
+    .from("shared_lists")
+    .insert({ name, emoji: text(formData.get("emoji"), 8) })
+    .select("id")
+    .single();
+  if (error || !data) return { error: "No se pudo crear la lista. Probá de nuevo." };
+
+  revalidateLists();
+  redirect(`/listas/${data.id}`);
+}
+
+export async function renameSharedList(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = await createClient();
+  await requireUser(supabase);
+
+  const id = text(formData.get("id"), 64);
+  const name = text(formData.get("name"), 60);
+  if (!id) return { error: "Falta la lista." };
+  if (!name) return { error: "Poné un nombre." };
+
+  const { error } = await supabase
+    .from("shared_lists")
+    .update({ name, emoji: text(formData.get("emoji"), 8) })
+    .eq("id", id);
+  if (error) return { error: "No se pudo guardar el nombre." };
+
+  revalidateLists();
+  return { error: null, ok: true };
+}
+
+/** Borra la lista y todos sus productos, para todos los miembros. Solo la dueña. */
+export async function deleteSharedList(id: string) {
+  const supabase = await createClient();
+  await requireUser(supabase);
+  await supabase.from("shared_lists").delete().eq("id", id);
+  revalidateLists();
+  redirect("/listas");
+}
+
+/** Devuelve el link de invitación, creándolo si no hay. Solo la dueña puede crearlo. */
+export async function getOrCreateInvite(listId: string): Promise<{ token: string | null; error: string | null }> {
+  const supabase = await createClient();
+  await requireUser(supabase);
+
+  const { data: list } = await supabase.from("shared_lists").select("invite_token").eq("id", listId).maybeSingle();
+  if (list?.invite_token) return { token: list.invite_token, error: null };
+
+  const token = crypto.randomUUID().replace(/-/g, "");
+  const { data, error } = await supabase
+    .from("shared_lists")
+    .update({ invite_token: token })
+    .eq("id", listId)
+    .select("invite_token")
+    .maybeSingle();
+  if (error || !data) return { token: null, error: "Solo quien creó la lista puede generar el link." };
+
+  revalidateLists();
+  return { token, error: null };
+}
+
+/** Desactiva el link: los que ya entraron siguen; nadie nuevo puede sumarse con él. */
+export async function revokeInvite(listId: string) {
+  const supabase = await createClient();
+  await requireUser(supabase);
+  await supabase.from("shared_lists").update({ invite_token: null }).eq("id", listId);
+  revalidateLists();
+}
+
+export async function joinSharedList(token: string) {
+  const supabase = await createClient();
+  await requireUser(supabase);
+  const { data: listId } = await supabase.rpc("join_shared_list", { p_token: token });
+  if (!listId) redirect("/listas?invitacion=invalida");
+  revalidateLists();
+  redirect(`/listas/${listId}`);
+}
+
+/** Saca a alguien de la lista (la dueña) o se va una misma (si no es la dueña). */
+export async function removeListMember(listId: string, userId: string) {
+  const supabase = await createClient();
+  const user = await requireUser(supabase);
+  await supabase.from("shared_list_members").delete().eq("list_id", listId).eq("user_id", userId);
+  revalidateLists();
+  if (userId === user.id) redirect("/listas");
 }
 
 /** Código de descuento cargado a mano en la página de una tienda. */

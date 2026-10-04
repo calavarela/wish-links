@@ -20,12 +20,15 @@ export default function ItemCard({
   categories,
   storeSaved,
   discountCode = null,
+  addedBy = null,
 }: {
   item: Item;
   categories: Category[];
   storeSaved: boolean;
   /** Un código vigente de la tienda del item, si hay. */
   discountCode?: DiscountCode | null;
+  /** En una lista compartida: quién lo agregó ("vos" o el nombre). */
+  addedBy?: string | null;
 }) {
   const [codeCopied, setCodeCopied] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -208,6 +211,8 @@ export default function ItemCard({
             {item.status === "bought" && paid && <p className="text-xs text-muted">Pagaste {paid}</p>}
 
             {item.note && <p className="line-clamp-1 text-xs text-muted">{item.note}</p>}
+
+            {addedBy && <p className="truncate text-[11px] text-subtle">Lo agregó {addedBy}</p>}
           </div>
         </a>
 

@@ -49,7 +49,7 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
 }
 
 export async function signUp(_prev: AuthState, formData: FormData): Promise<AuthState> {
-  const { email, password } = readCredentials(formData);
+  const { email, password, next } = readCredentials(formData);
   if (!email || !password) return { error: "Completá email y contraseña.", message: null };
   if (password.length < 8) return { error: "La contraseña necesita al menos 8 caracteres.", message: null };
 
@@ -79,5 +79,6 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
     };
   }
 
-  return { error: null, message: null, event: "sign_up", next: "/", user };
+  // Respeta `next`: quien llega por una invitación a una lista vuelve a ella después de registrarse.
+  return { error: null, message: null, event: "sign_up", next: safeNext(next), user };
 }

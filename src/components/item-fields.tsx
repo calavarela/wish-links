@@ -129,19 +129,22 @@ export default function ItemFields({
         </label>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-muted">Categoría</span>
-          <select className={fieldClass} name="categoryId" defaultValue={defaults.categoryId ?? ""}>
-            <option value="">Sin categoría</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.emoji ? `${category.emoji} ` : ""}
-                {category.name}
-              </option>
-            ))}
-          </select>
-        </label>
+      {/* Sin categorías para elegir (en una lista compartida no hay), el selector no aporta nada. */}
+      <div className={`grid gap-2 ${categories.length > 0 ? "grid-cols-2" : "grid-cols-1"}`}>
+        {categories.length > 0 && (
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-muted">Categoría</span>
+            <select className={fieldClass} name="categoryId" defaultValue={defaults.categoryId ?? ""}>
+              <option value="">Sin categoría</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.emoji ? `${category.emoji} ` : ""}
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label className="flex flex-col gap-1.5">
           <span className="text-xs font-medium text-muted">Estado</span>
           <select className={fieldClass} name="status" defaultValue={defaults.status ?? "pending"}>

@@ -60,7 +60,8 @@ export default async function HomePage(props: PageProps<"/">) {
     { data: discountCodes },
   ] = await Promise.all([
       supabase.from("categories").select("*").order("position"),
-      supabase.from("items").select("*").order("created_at", { ascending: false }),
+      // Solo la lista personal: los productos de listas compartidas viven en /listas.
+      supabase.from("items").select("*").is("shared_list_id", null).order("created_at", { ascending: false }),
       supabase.from("share_links").select("*"),
       supabase.from("stores").select("domain"),
       supabase

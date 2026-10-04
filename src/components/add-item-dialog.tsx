@@ -15,11 +15,14 @@ export default function AddItemDialog({
   onClose,
   categories,
   prefillUrl,
+  sharedListId = null,
 }: {
   open: boolean;
   onClose: () => void;
   categories: Category[];
   prefillUrl?: string | null;
+  /** Si viene, el producto se agrega a esa lista compartida y no se pide categoría. */
+  sharedListId?: string | null;
 }) {
   const [url, setUrl] = useState(prefillUrl ?? "");
   const [preview, setPreview] = useState<LinkPreview | null>(null);
@@ -37,7 +40,7 @@ export default function AddItemDialog({
       const response = await fetch("/api/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: value }),
+        body: JSON.stringify({ url: value, sharedListId }),
       });
       const data = await response.json();
       if (!response.ok) {
@@ -54,7 +57,7 @@ export default function AddItemDialog({
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [sharedListId]);
 
   // Cuando llega compartido desde el celular, la preview se busca sola.
   useEffect(() => {
@@ -114,7 +117,7 @@ export default function AddItemDialog({
 
           {duplicate && (
             <p className="rounded-lg bg-stone-100 px-3 py-2 text-xs text-muted">
-              Ya tenés este link guardado
+              {sharedListId ? "Este link ya está en la lista" : "Ya tenés este link guardado"}
               {duplicate.title ? `: “${duplicate.title}”` : "."}
             </p>
           )}
@@ -135,6 +138,7 @@ export default function AddItemDialog({
           <input type="hidden" name="siteName" value={preview.siteName ?? ""} />
           <input type="hidden" name="description" value={preview.description ?? ""} />
           <input type="hidden" name="listPriceAmount" value={preview.listPriceAmount ?? ""} />
+          {sharedListId && <input type="hidden" name="sharedListId" value={sharedListId} />}
 
           <div className="flex items-center gap-2 rounded-xl bg-stone-100 px-3 py-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}

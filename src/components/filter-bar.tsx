@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Funnel, Loader2, Settings2, Store as StoreIcon, Trash2 } from "lucide-react";
+import { Funnel, Loader2, Settings2, Store as StoreIcon, Trash2, Users } from "lucide-react";
 import posthog from "posthog-js";
 import { createCategory, deleteCategory, type ActionState } from "@/app/actions";
 import { isOnPromo } from "@/lib/format";
@@ -144,6 +144,13 @@ export default function FilterBar({
           >
             <StoreIcon className="size-3.5" />
             Tiendas favoritas
+          </Link>
+          <Link
+            href="/listas"
+            className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-line bg-surface px-2 py-1 text-xs text-muted transition hover:border-ink hover:text-ink"
+          >
+            <Users className="size-3.5" />
+            Listas
           </Link>
         </div>
       </div>

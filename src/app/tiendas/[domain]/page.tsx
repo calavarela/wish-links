@@ -26,7 +26,7 @@ async function loadStore(rawDomain: string) {
   const supabase = await createClient();
   const [{ data: store }, { data: items }, { data: categories }, { data: codes }] = await Promise.all([
     supabase.from("stores").select("*").eq("domain", domain).maybeSingle(),
-    supabase.from("items").select("*").order("created_at", { ascending: false }),
+    supabase.from("items").select("*").is("shared_list_id", null).order("created_at", { ascending: false }),
     supabase.from("categories").select("*").order("position"),
     supabase.from("discount_codes").select("*").order("created_at", { ascending: false }),
   ]);

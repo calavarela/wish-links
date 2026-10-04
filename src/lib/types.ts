@@ -47,6 +47,8 @@ export type Item = {
   previous_price_amount: number | null;
   /** Precio tachado que publica la tienda cuando está en promo; null = sin promo. */
   list_price_amount: number | null;
+  /** Lista colaborativa a la que pertenece; null = lista personal. `user_id` es quien lo agregó. */
+  shared_list_id: string | null;
   price_changed_at: string | null;
   /** Última vez que el chequeo diario leyó la página. */
   price_checked_at: string | null;
@@ -86,6 +88,25 @@ export type Store = {
   url: string;
   favicon_url: string | null;
   created_at: string;
+};
+
+/** Lista colaborativa: aparte de las categorías, todos sus miembros la editan. */
+export type SharedList = {
+  id: string;
+  owner_id: string;
+  name: string;
+  emoji: string | null;
+  /** Link de invitación; null = desactivado. Solo la dueña lo maneja. */
+  invite_token: string | null;
+  created_at: string;
+};
+
+/** Lo que devuelve `shared_list_people`: miembros con su email. */
+export type SharedListPerson = {
+  user_id: string;
+  email: string;
+  role: "owner" | "editor";
+  joined_at: string;
 };
 
 /** Código de descuento de una tienda. `domain` es el mismo que en Store. */

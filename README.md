@@ -118,6 +118,25 @@ vigentes. El vencimiento se cuenta en hora de Argentina (`src/lib/code-expiry.ts
 
 En la tarjeta, un chip con un ticket copia el código vigente de su tienda.
 
+## Listas compartidas (colaborativas)
+
+Aparte de las categorías personales: `/listas` muestra las listas de las que sos miembro y
+deja crear una nueva; `/listas/<id>` es la lista, con sus productos por estado.
+
+- `shared_lists` (nombre, emoji, `invite_token`) y `shared_list_members` (`owner` o
+  `editor`). Un trigger suma a quien la crea como `owner`.
+- Los productos de una lista tienen `items.shared_list_id`; `user_id` es quien lo agregó y
+  no llevan categoría. La lista personal, /tiendas y el link público de solo lectura filtran
+  `shared_list_id is null`.
+- Las policies de `items` dejan ver y editar lo personal solo a su dueña y lo compartido a
+  cualquier miembro (`is_list_member`, `security definer` para no caer en recursión de RLS).
+  Solo la dueña renombra, borra la lista, maneja el link y saca gente; cada miembro puede
+  salir.
+- Invitación: la dueña genera un link `/unirse/<token>`. Quien lo abre inicia sesión o se
+  registra (vuelve al link gracias a `next`), ve la lista con `preview_shared_list` y se suma
+  con `join_shared_list`. Desactivar el link no saca a nadie.
+- Una baja de precio en un producto compartido avisa a todos los miembros.
+
 ## Notificaciones
 
 La campanita del header abre los avisos de la tabla `notifications`. Hoy hay un solo tipo,
