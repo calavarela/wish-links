@@ -45,6 +45,7 @@ export default async function HomePage(props: PageProps<"/">) {
   const query = (first(params.q) ?? "").trim();
   const sort = (first(params.sort) ?? "recent") as SortKey;
   const promoOnly = first(params.promo) === "1";
+  const tag = first(params.tag)?.toLowerCase() ?? null;
   const prefillUrl = first(params.add) ?? null;
 
   const supabase = await createClient();
@@ -86,6 +87,7 @@ export default async function HomePage(props: PageProps<"/">) {
       if (category !== "all" && category !== "none" && item.category_id !== category) return false;
       if (query && !matchesSearch(item, query)) return false;
       if (promoOnly && !isOnPromo(item)) return false;
+      if (tag && !item.tags.includes(tag)) return false;
       return true;
     }),
     sort,
@@ -114,6 +116,7 @@ export default async function HomePage(props: PageProps<"/">) {
           activeStatus={status}
           activeSort={sort}
           promoOnly={promoOnly}
+          activeTag={tag}
         />
       </div>
 

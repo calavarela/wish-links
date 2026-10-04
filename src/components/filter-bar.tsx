@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Funnel, Loader2, Settings2, Store as StoreIcon, Trash2, Users } from "lucide-react";
@@ -10,6 +10,7 @@ import { isOnPromo } from "@/lib/format";
 import type { Category, Item, ItemStatus } from "@/lib/types";
 import Dialog from "./dialog";
 import { fieldClass } from "./item-fields";
+import TagManager from "./tag-manager";
 
 const EMPTY: ActionState = { error: null };
 
@@ -34,6 +35,7 @@ export default function FilterBar({
   activeStatus,
   activeSort,
   promoOnly,
+  activeTag,
 }: {
   categories: Category[];
   items: Item[];
@@ -41,17 +43,30 @@ export default function FilterBar({
   activeStatus: ItemStatus | "all";
   activeSort: string;
   promoOnly: boolean;
+  activeTag: string | null;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [managing, setManaging] = useState(false);
+  const [managingTags, setManagingTags] = useState(false);
+  const closeTags = useCallback(() => setManagingTags(false), []);
 
   function setParam(key: string, value: string | null) {
-    posthog.capture("filter_applied", {
-      filter: key,
-      selection: key === "cat" ? (value === "none" ? "uncategorized" : value ? "category" : "all") : value ?? "default",
-    });
+    // De categorías y etiquetas no se manda el valor: es texto de la usuaria.
+    const selection =
+      key === "cat"
+        ? value === "none"
+          ? "uncategorized"
+          : value
+            ? "category"
+            : "all"
+        : key === "tag"
+          ? value
+            ? "tag"
+            : "all"
+          : (value ?? "default");
+    posthog.capture("filter_applied", { filter: key, selection });
     const params = new URLSearchParams(searchParams);
     if (value) params.set(key, value);
     else params.delete(key);
@@ -65,6 +80,7 @@ export default function FilterBar({
     params.delete("status");
     params.delete("sort");
     params.delete("promo");
+    params.delete("tag");
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }
 
@@ -73,6 +89,13 @@ export default function FilterBar({
   const countFor = (categoryId: string | null) =>
     inStatus.filter((item) => item.category_id === categoryId).length;
   const uncategorized = countFor(null);
+
+  // Etiquetas en uso (con cuántos productos del estado elegido), de más a menos usadas.
+  const tagCounts = [
+    ...inStatus
+      .flatMap((item) => item.tags)
+      .reduce((counts, tag) => counts.set(tag, (counts.get(tag) ?? 0) + 1), new Map<string, number>()),
+  ].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "es"));
 
   const chipClass = (active: boolean) =>
     `shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition ${
@@ -134,6 +157,9 @@ export default function FilterBar({
             activeSort={activeSort}
             promoOnly={promoOnly}
             promoCount={inStatus.filter(isOnPromo).length}
+            activeTag={activeTag}
+            tagCounts={tagCounts}
+            onManageTags={() => setManagingTags(true)}
             setParam={setParam}
             onReset={resetFilters}
           />
@@ -161,16 +187,22 @@ export default function FilterBar({
         categories={categories}
         countFor={countFor}
       />
+
+      {/* Fuera del panel de filtros: el panel se cierra al tocar afuera y se llevaría el diálogo. */}
+      {managingTags && <TagManager onClose={closeTags} />}
     </>
   );
 }
 
-/** Estado, orden y promos en un solo botón: el número cuenta lo que no está en su valor por defecto. */
+/** Estado, orden, promos y etiquetas en un solo botón: el número cuenta lo que no está en su valor por defecto. */
 function FiltersMenu({
   activeStatus,
   activeSort,
   promoOnly,
   promoCount,
+  activeTag,
+  tagCounts,
+  onManageTags,
   setParam,
   onReset,
 }: {
@@ -178,12 +210,16 @@ function FiltersMenu({
   activeSort: string;
   promoOnly: boolean;
   promoCount: number;
+  activeTag: string | null;
+  tagCounts: [string, number][];
+  onManageTags: () => void;
   setParam: (key: string, value: string | null) => void;
   onReset: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const changed = Number(activeStatus !== "pending") + Number(activeSort !== "recent") + Number(promoOnly);
+  const changed =
+    Number(activeStatus !== "pending") + Number(activeSort !== "recent") + Number(promoOnly) + Number(Boolean(activeTag));
 
   useEffect(() => {
     if (!open) return;
@@ -272,6 +308,43 @@ function FiltersMenu({
             >
               Solo en promo <span className="opacity-60">{promoCount}</span>
             </button>
+          </fieldset>
+
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-2 flex w-full items-center justify-between text-xs font-medium text-subtle">
+              Etiquetas
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  onManageTags();
+                }}
+                className="font-normal text-subtle underline-offset-2 transition hover:text-ink hover:underline"
+              >
+                Editar
+              </button>
+            </legend>
+            {tagCounts.length === 0 && !activeTag ? (
+              <p className="text-[11px] text-subtle">Todavía no usaste etiquetas en estos productos.</p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {/* Si la elegida no tiene productos en este estado igual se muestra, para poder sacarla. */}
+                {(activeTag && !tagCounts.some(([name]) => name === activeTag)
+                  ? [...tagCounts, [activeTag, 0] as [string, number]]
+                  : tagCounts
+                ).map(([name, count]) => (
+                  <button
+                    key={name}
+                    type="button"
+                    aria-pressed={activeTag === name}
+                    className={optionClass(activeTag === name)}
+                    onClick={() => setParam("tag", activeTag === name ? null : name)}
+                  >
+                    {name} <span className="opacity-60">{count}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </fieldset>
 
           {changed > 0 && (

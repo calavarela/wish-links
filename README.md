@@ -137,6 +137,14 @@ deja crear una nueva; `/listas/<id>` es la lista, con sus productos por estado.
   con `join_shared_list`. Desactivar el link no saca a nadie.
 - Una baja de precio en un producto compartido avisa a todos los miembros.
 
+## Etiquetas
+
+`tags` es el catálogo de cada usuaria (nombres en minúscula, únicos); los productos guardan
+los nombres en `items.tags`. Al cargar o editar un producto se eligen tocando chips
+(`TagPicker`) o se crea una nueva, que entra al catálogo al guardar. En el panel de filtros
+se filtra por etiqueta (`?tag=`) y desde "Editar" se renombran o borran: `rename_tag` y
+`delete_tag` cambian el catálogo y todos los productos propios a la vez.
+
 ## Notificaciones
 
 La campanita del header abre los avisos de la tabla `notifications`. Hoy hay un solo tipo,

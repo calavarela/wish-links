@@ -108,11 +108,22 @@ function parseTags(raw: FormDataEntryValue | null): string[] {
     ...new Set(
       raw
         .split(",")
-        .map((tag) => tag.trim().toLowerCase())
+        .map((tag) => tag.trim().toLowerCase().slice(0, 30))
         .filter(Boolean)
         .slice(0, 12),
     ),
   ];
+}
+
+/** Suma al catálogo las etiquetas usadas en un producto (las nuevas se crean al elegirlas). */
+async function rememberTags(supabase: SupabaseClient, tags: string[]) {
+  if (tags.length === 0) return;
+  await supabase
+    .from("tags")
+    .upsert(
+      tags.map((name) => ({ name })),
+      { onConflict: "user_id,name", ignoreDuplicates: true },
+    );
 }
 
 function parseAmount(raw: FormDataEntryValue | null): number | null {
@@ -151,6 +162,7 @@ export async function createItem(_prev: ActionState, formData: FormData): Promis
   const status = (text(formData.get("status"), 16) ?? "pending") as ItemStatus;
   const domain = getDomain(url);
   const priceAmount = parseAmount(formData.get("priceAmount"));
+  const tags = parseTags(formData.get("tags"));
 
   const { error } = await supabase.from("items").insert({
     user_id: user.id,
@@ -169,7 +181,7 @@ export async function createItem(_prev: ActionState, formData: FormData): Promis
     list_price_amount: promoListPrice(parseAmount(formData.get("listPriceAmount")), priceAmount),
     status,
     note: text(formData.get("note"), 500),
-    tags: parseTags(formData.get("tags")),
+    tags,
   });
 
   if (error) {
@@ -179,6 +191,7 @@ export async function createItem(_prev: ActionState, formData: FormData): Promis
     return { error: "No se pudo guardar. Probá de nuevo." };
   }
 
+  await rememberTags(supabase, tags);
   revalidateLists();
   return {
     error: null,
@@ -200,6 +213,7 @@ export async function updateItem(_prev: ActionState, formData: FormData): Promis
     newFile && newFile.size > 0
       ? ((await storeImage(supabase, user.id, { file: newFile })) ?? currentImage)
       : currentImage;
+  const tags = parseTags(formData.get("tags"));
 
   const { error } = await supabase
     .from("items")
@@ -211,12 +225,13 @@ export async function updateItem(_prev: ActionState, formData: FormData): Promis
       price_currency: text(formData.get("priceCurrency"), 8),
       status: (text(formData.get("status"), 16) ?? "pending") as ItemStatus,
       note: text(formData.get("note"), 500),
-      tags: parseTags(formData.get("tags")),
+      tags,
     })
     .eq("id", id);
 
   if (error) return { error: "No se pudo guardar el cambio." };
 
+  await rememberTags(supabase, tags);
   revalidateLists();
   return { error: null, ok: true };
 }
@@ -400,6 +415,34 @@ export async function revokeShareLink(token: string) {
   const supabase = await createClient();
   await requireUser(supabase);
   await supabase.from("share_links").delete().eq("token", token);
+  revalidateLists();
+}
+
+// ── Etiquetas ─────────────────────────────────────────────────────────────────
+
+/** Renombra en el catálogo y en todos los productos propios (rename_tag). */
+export async function renameTag(id: string, name: string): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  await requireUser(supabase);
+
+  const clean = name.trim().toLowerCase().slice(0, 30);
+  if (!clean) return { error: "Poné un nombre." };
+  if (clean.includes(",")) return { error: "El nombre no puede tener comas." };
+
+  const { error } = await supabase.rpc("rename_tag", { p_tag: id, p_name: clean });
+  if (error) {
+    return { error: error.code === "23505" ? "Ya tenés una etiqueta con ese nombre." : "No se pudo renombrar." };
+  }
+
+  revalidateLists();
+  return { error: null };
+}
+
+/** La saca del catálogo y de todos los productos propios (delete_tag). */
+export async function deleteTag(id: string) {
+  const supabase = await createClient();
+  await requireUser(supabase);
+  await supabase.rpc("delete_tag", { p_tag: id });
   revalidateLists();
 }
 

@@ -90,6 +90,12 @@ export type Store = {
   created_at: string;
 };
 
+/** Etiqueta del catálogo de la usuaria. Los items guardan el `name` en `tags`. */
+export type Tag = {
+  id: string;
+  name: string;
+};
+
 /** Lista colaborativa: aparte de las categorías, todos sus miembros la editan. */
 export type SharedList = {
   id: string;

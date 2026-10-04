@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { ImagePlus, Link2 } from "lucide-react";
 import type { Category, ItemStatus } from "@/lib/types";
 import { CURRENCIES, STATUS_LABELS } from "@/lib/types";
+import TagPicker from "./tag-picker";
 
 export const fieldClass =
   "w-full rounded-xl border border-line bg-surface px-3 py-2 text-sm outline-none placeholder:text-subtle focus:border-ink";
@@ -168,15 +169,7 @@ export default function ItemFields({
         />
       </label>
 
-      <label className="flex flex-col gap-1.5">
-        <span className="text-xs font-medium text-muted">Etiquetas</span>
-        <input
-          className={fieldClass}
-          name="tags"
-          defaultValue={defaults.tags?.join(", ") ?? ""}
-          placeholder="verano, oferta, cumpleaños"
-        />
-      </label>
+      <TagPicker defaultValue={defaults.tags ?? []} />
     </div>
   );
 }
