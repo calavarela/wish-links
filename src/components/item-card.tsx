@@ -3,12 +3,12 @@
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { Check, MoreHorizontal, Pencil, RotateCcw, Star, Store as StoreIcon, Trash2, X } from "lucide-react";
+import { Check, MoreHorizontal, Pencil, RotateCcw, Star, Store as StoreIcon, Tag, Ticket, Trash2, X } from "lucide-react";
 import posthog from "posthog-js";
 import { deleteItem, saveStoreFromItem, setItemStatus } from "@/app/actions";
 import { formatPct, formatPrice, priceChangePct } from "@/lib/format";
 import { isStoreDomain, storeDomain } from "@/lib/url";
-import { CURRENCIES, type Category, type Item, type PurchaseSource } from "@/lib/types";
+import { CURRENCIES, type Category, type DiscountCode, type Item, type PurchaseSource } from "@/lib/types";
 import Dialog from "./dialog";
 import EditItemDialog from "./edit-item-dialog";
 import { fieldClass } from "./item-fields";
@@ -19,11 +19,15 @@ export default function ItemCard({
   item,
   categories,
   storeSaved,
+  discountCode = null,
 }: {
   item: Item;
   categories: Category[];
   storeSaved: boolean;
+  /** Un código vigente de la tienda del item, si hay. */
+  discountCode?: DiscountCode | null;
 }) {
+  const [codeCopied, setCodeCopied] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [askingSource, setAskingSource] = useState(false);
@@ -51,6 +55,16 @@ export default function ItemCard({
   const listPct = priceChangePct(item.price_amount, item.list_price_amount);
   const promoPct = listPct !== null && listPct < 0 ? listPct : null;
   const showPromo = item.status === "pending" && promoPct !== null;
+  const showCode = item.status === "pending" && discountCode !== null;
+
+  function copyCode() {
+    if (!discountCode) return;
+    void navigator.clipboard?.writeText(discountCode.code).then(() => {
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 1500);
+    });
+    posthog.capture("discount_code_copied", { domain: item.domain, source: discountCode.source, from: "card" });
+  }
   const paid = formatPrice(item.paid_amount, item.paid_currency);
   const isStored = Boolean(item.image_url && SUPABASE_URL && item.image_url.startsWith(SUPABASE_URL));
   const category = categories.find((c) => c.id === item.category_id);
@@ -194,30 +208,48 @@ export default function ItemCard({
             {item.status === "bought" && paid && <p className="text-xs text-muted">Pagaste {paid}</p>}
 
             {item.note && <p className="line-clamp-1 text-xs text-muted">{item.note}</p>}
-
-            {(showPromo || category || item.tags.length > 0) && (
-              <div className="mt-1 flex flex-wrap gap-1">
-                {/* La promo va primero: es lo más útil de la fila. */}
-                {showPromo && (
-                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
-                    Promo {formatPct(promoPct!)}
-                  </span>
-                )}
-                {category && (
-                  <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[10px] text-muted">
-                    {category.emoji ? `${category.emoji} ` : ""}
-                    {category.name}
-                  </span>
-                )}
-                {item.tags.slice(0, 2).map((tag) => (
-                  <span key={tag} className="rounded-full bg-stone-100 px-2 py-0.5 text-[10px] text-muted">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
           </div>
         </a>
+
+        {/* Fuera del link: el chip del código es un botón para copiarlo. -mt-1 compensa el padding de arriba. */}
+        {(showPromo || showCode || category || item.tags.length > 0) && (
+          <div className="-mt-1 flex flex-wrap gap-1 px-3 pb-3">
+            {/* La promo va primero: es lo más útil de la fila. */}
+            {showPromo && (
+              <span
+                title="En promoción"
+                className="flex items-center gap-0.5 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700"
+              >
+                <Tag className="size-3" />
+                {formatPct(promoPct!)}
+              </span>
+            )}
+            {showCode && (
+              // Solo el ícono para no sumar otra línea de chips: el código se ve al copiarlo y en la página de la tienda.
+              <button
+                type="button"
+                onClick={copyCode}
+                aria-label={`Copiar el código ${discountCode!.code}`}
+                title={[discountCode!.code, discountCode!.description, "Tocá para copiar"].filter(Boolean).join(" · ")}
+                className="flex items-center gap-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 transition hover:bg-amber-200"
+              >
+                <Ticket className="size-3" />
+                {codeCopied && `¡${discountCode!.code} copiado!`}
+              </button>
+            )}
+            {category && (
+              <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[10px] text-muted">
+                {category.emoji ? `${category.emoji} ` : ""}
+                {category.name}
+              </span>
+            )}
+            {item.tags.slice(0, 2).map((tag) => (
+              <span key={tag} className="rounded-full bg-stone-100 px-2 py-0.5 text-[10px] text-muted">
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
 
         <div ref={menuRef} className="absolute right-2 top-2">
           <button

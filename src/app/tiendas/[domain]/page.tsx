@@ -3,9 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { formatDate, formatPrice } from "@/lib/format";
-import type { Category, Item, ItemStatus, Store } from "@/lib/types";
+import { formatPrice } from "@/lib/format";
+import { codesForDomain } from "@/lib/discount-codes";
+import type { Category, DiscountCode, Item, ItemStatus, Store } from "@/lib/types";
 import { faviconFor, isSameStore, isStoreDomain, storeNameFromDomain } from "@/lib/url";
+import DiscountCodes from "@/components/discount-codes";
 import ItemCard from "@/components/item-card";
 import RenameStoreButton from "@/components/rename-store-button";
 import StoreFavoriteButton from "@/components/store-favorite-button";
@@ -22,10 +24,11 @@ async function loadStore(rawDomain: string) {
   if (!DOMAIN.test(domain) || !isStoreDomain(domain)) return null;
 
   const supabase = await createClient();
-  const [{ data: store }, { data: items }, { data: categories }] = await Promise.all([
+  const [{ data: store }, { data: items }, { data: categories }, { data: codes }] = await Promise.all([
     supabase.from("stores").select("*").eq("domain", domain).maybeSingle(),
     supabase.from("items").select("*").order("created_at", { ascending: false }),
     supabase.from("categories").select("*").order("position"),
+    supabase.from("discount_codes").select("*").order("created_at", { ascending: false }),
   ]);
 
   const storeItems = ((items ?? []) as Item[]).filter((item) => isSameStore(item.domain, domain));
@@ -43,6 +46,7 @@ async function loadStore(rawDomain: string) {
     store: store as Store | null,
     items: storeItems,
     categories: (categories ?? []) as Category[],
+    codes: (codes ?? []) as DiscountCode[],
   };
 }
 
@@ -72,7 +76,10 @@ export default async function StorePage(props: PageProps<"/tiendas/[domain]">) {
   const data = await loadStore(rawDomain);
   if (!data) notFound();
 
-  const { domain, name, store, items, categories } = data;
+  const { domain, name, store, items, categories, codes } = data;
+  // En la página se ven también los vencidos (marcados); en las tarjetas, solo los vigentes.
+  const storeCodes = codesForDomain(codes, domain, { includeExpired: true });
+  const activeCode = codesForDomain(codes, domain)[0] ?? null;
   const byStatus = (status: ItemStatus) => items.filter((item) => item.status === status);
   const pending = byStatus("pending");
   const bought = byStatus("bought");
@@ -93,7 +100,6 @@ export default async function StorePage(props: PageProps<"/tiendas/[domain]">) {
   ]
     .filter(Boolean)
     .join(" · ");
-  const firstSaved = items.at(-1)?.created_at;
   const url = store?.url ?? `https://${domain}`;
 
   return (
@@ -127,12 +133,14 @@ export default async function StorePage(props: PageProps<"/tiendas/[domain]">) {
         <StoreFavoriteButton storeId={store?.id ?? null} itemId={items[0]?.id ?? null} name={name} />
       </header>
 
-      <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {/* Tres datos en una fila también en el celu. Más adelante puede sumarse "Ahorrado". */}
+      <dl className="mt-5 grid grid-cols-3 gap-2 sm:gap-3">
         <Stat label="Pendientes" value={String(pending.length)} detail={pendingTotal} />
         <Stat label="Comprados" value={String(bought.length)} />
         <Stat label="Gastado" value={spent ?? "$ 0"} detail={spentDetail || null} />
-        <Stat label="Primer guardado" value={firstSaved ? formatDate(firstSaved) : "—"} />
       </dl>
+
+      <DiscountCodes domain={domain} codes={storeCodes} />
 
       {items.length === 0 ? (
         <p className="mt-8 rounded-2xl border border-dashed border-line px-6 py-12 text-center text-sm text-muted">
@@ -149,7 +157,13 @@ export default async function StorePage(props: PageProps<"/tiendas/[domain]">) {
               </h2>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                 {list.map((item) => (
-                  <ItemCard key={item.id} item={item} categories={categories} storeSaved={Boolean(store)} />
+                  <ItemCard
+                    key={item.id}
+                    item={item}
+                    categories={categories}
+                    storeSaved={Boolean(store)}
+                    discountCode={activeCode}
+                  />
                 ))}
               </div>
             </section>
@@ -162,10 +176,10 @@ export default async function StorePage(props: PageProps<"/tiendas/[domain]">) {
 
 function Stat({ label, value, detail }: { label: string; value: string; detail?: string | null }) {
   return (
-    <div className="rounded-2xl border border-line bg-surface p-3">
+    <div className="min-w-0 rounded-2xl border border-line bg-surface p-3">
       <dt className="text-[11px] text-subtle">{label}</dt>
-      <dd className="mt-0.5 text-lg font-semibold tracking-tight">{value}</dd>
-      {detail && <dd className="text-xs text-muted">{detail}</dd>}
+      <dd className="mt-0.5 text-base font-semibold tracking-tight sm:text-lg">{value}</dd>
+      {detail && <dd className="text-[11px] text-muted sm:text-xs">{detail}</dd>}
     </div>
   );
 }

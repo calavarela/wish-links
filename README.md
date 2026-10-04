@@ -99,6 +99,25 @@ lectura buena, así una promo que terminó vuelve a `null`. Cómo se detecta seg
 Mercado Libre bloquea la lectura, así que no se detecta. La tarjeta muestra la etiqueta
 "Promo -X%" y el precio tachado, y el panel de filtros tiene "Solo en promo" (`?promo=1`).
 
+## Códigos de descuento
+
+La tabla `discount_codes` guarda códigos por tienda (`domain`, el mismo de `stores`), con
+descripción y vencimiento opcionales. Se cruzan con los productos con `isSameStore`. En la
+página de la tienda cada código muestra cuánto le queda ("Vence hoy · quedan 5 h", "Quedan
+2 días") y los vencidos quedan al final, tachados; en las tarjetas solo se ofrecen los
+vigentes. El vencimiento se cuenta en hora de Argentina (`src/lib/code-expiry.ts`).
+
+- **Manuales** (`source = manual`): se cargan en la página de la tienda. Las policies solo
+  dejan insertar con este origen.
+- **Detectados** (`source = detected`): el chequeo diario lee la página principal de cada
+  tienda que alguien tiene en su lista (productos pendientes o favoritas) y busca menciones
+  tipo "15% OFF con el código HOLA15" (`src/lib/discount-codes.ts`). Es estricto a propósito:
+  el código tiene que estar en mayúsculas y no ser una palabra de banner ("CUPÓN REGALO",
+  "código postal"). Se renuevan en cada lectura buena y se borran si dejan de aparecer; los
+  manuales no se tocan.
+
+En la tarjeta, un chip con un ticket copia el código vigente de su tienda.
+
 ## Notificaciones
 
 La campanita del header abre los avisos de la tabla `notifications`. Hoy hay un solo tipo,

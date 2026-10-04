@@ -1,7 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { fetchPreview } from "@/lib/preview";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { detectCodes } from "@/lib/discount-codes";
+import { fetchPageHtml, fetchPreview } from "@/lib/preview";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { LinkPreview } from "@/lib/types";
+import type { DiscountCode, LinkPreview } from "@/lib/types";
+import { isStoreDomain, storeDomain } from "@/lib/url";
 
 // Cada página puede tardar hasta ~18 s (dos intentos), así que se revisa en tandas.
 export const maxDuration = 300;
@@ -61,16 +64,76 @@ export async function GET(request: NextRequest) {
       .eq("id", item.id);
   }
 
-  const queue = [...(items as PendingItem[])];
+  await inPool(items as PendingItem[], check);
+  const codes = await syncDetectedCodes(supabase);
+
+  return NextResponse.json({ checked: items.length, changed, promos, ...codes });
+}
+
+/** Corre `task` sobre todos los elementos, de a CONCURRENCY a la vez. Un error no corta el resto. */
+async function inPool<T>(list: T[], task: (value: T) => Promise<void>) {
+  const queue = [...list];
   await Promise.all(
     Array.from({ length: CONCURRENCY }, async () => {
-      for (let item = queue.shift(); item; item = queue.shift()) {
-        await check(item).catch(() => {});
+      for (let value = queue.shift(); value !== undefined; value = queue.shift()) {
+        await task(value).catch(() => {});
       }
     }),
   );
+}
 
-  return NextResponse.json({ checked: items.length, changed, promos });
+/**
+ * Busca códigos de descuento en la página principal de cada tienda que alguien
+ * tiene en su lista (productos pendientes o favoritas). Los detectados se
+ * renuevan en cada lectura buena y se borran si dejan de aparecer; los que
+ * cargó la usuaria no se tocan nunca.
+ */
+async function syncDetectedCodes(supabase: SupabaseClient) {
+  const [{ data: items }, { data: stores }, { data: existing }] = await Promise.all([
+    supabase.from("items").select("user_id, url").eq("status", "pending"),
+    supabase.from("stores").select("user_id, domain"),
+    supabase.from("discount_codes").select("id, user_id, domain, code, source"),
+  ]);
+
+  // dominio de tienda → usuarias que lo tienen
+  const owners = new Map<string, Set<string>>();
+  const add = (domain: string, userId: string) => {
+    if (!isStoreDomain(domain)) return;
+    if (!owners.has(domain)) owners.set(domain, new Set());
+    owners.get(domain)!.add(userId);
+  };
+  for (const item of items ?? []) add(storeDomain(item.url), item.user_id);
+  for (const store of stores ?? []) add(store.domain, store.user_id);
+
+  const codes = (existing ?? []) as (Pick<DiscountCode, "id" | "domain" | "code" | "source"> & { user_id: string })[];
+  let detected = 0;
+
+  await inPool([...owners.keys()], async (domain) => {
+    const html = await fetchPageHtml(`https://${domain}`);
+    if (html === null) return; // Sin lectura no se borra nada: puede ser un error pasajero.
+    const found = detectCodes(html);
+    detected += found.length;
+    const now = new Date().toISOString();
+
+    for (const userId of owners.get(domain)!) {
+      const mine = codes.filter((c) => c.user_id === userId && c.domain === domain);
+      for (const { code, description } of found) {
+        const current = mine.find((c) => c.code === code);
+        if (current?.source === "manual") continue;
+        if (current) {
+          await supabase.from("discount_codes").update({ description, detected_at: now }).eq("id", current.id);
+        } else {
+          await supabase
+            .from("discount_codes")
+            .insert({ user_id: userId, domain, code, description, source: "detected", detected_at: now });
+        }
+      }
+      const gone = mine.filter((c) => c.source === "detected" && !found.some((f) => f.code === c.code));
+      if (gone.length) await supabase.from("discount_codes").delete().in("id", gone.map((c) => c.id));
+    }
+  });
+
+  return { stores_checked: owners.size, codes_detected: detected };
 }
 
 /**

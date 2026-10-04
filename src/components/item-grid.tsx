@@ -1,5 +1,6 @@
 import { Heart } from "lucide-react";
-import type { Category, Item } from "@/lib/types";
+import { codesForDomain } from "@/lib/discount-codes";
+import type { Category, DiscountCode, Item } from "@/lib/types";
 import { isSameStore } from "@/lib/url";
 import ItemCard from "./item-card";
 
@@ -7,11 +8,13 @@ export default function ItemGrid({
   items,
   categories,
   storeDomains,
+  discountCodes,
   hasAnyItem,
 }: {
   items: Item[];
   categories: Category[];
   storeDomains: string[];
+  discountCodes: DiscountCode[];
   hasAnyItem: boolean;
 }) {
   if (items.length === 0) {
@@ -46,6 +49,7 @@ export default function ItemGrid({
           item={item}
           categories={categories}
           storeSaved={storeDomains.some((domain) => isSameStore(item.domain, domain))}
+          discountCode={codesForDomain(discountCodes, item.domain)[0] ?? null}
         />
       ))}
     </div>

@@ -219,6 +219,12 @@ async function fetchHtml(
   }
 }
 
+/** HTML de una página pública con el user-agent de navegador, o null si no se pudo leer. */
+export async function fetchPageHtml(url: string): Promise<string | null> {
+  if (!isPubliclyFetchable(url)) return null;
+  return (await fetchHtml(url, BROWSER_UA))?.html ?? null;
+}
+
 /**
  * Varias tiendas (Amazon, Zara, Mercado Libre) rechazan a un navegador headless
  * pero sí le sirven las etiquetas Open Graph al crawler de las redes sociales,

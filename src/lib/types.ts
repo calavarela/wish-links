@@ -88,6 +88,19 @@ export type Store = {
   created_at: string;
 };
 
+/** Código de descuento de una tienda. `domain` es el mismo que en Store. */
+export type DiscountCode = {
+  id: string;
+  domain: string;
+  code: string;
+  description: string | null;
+  /** YYYY-MM-DD; null = sin vencimiento conocido. */
+  expires_on: string | null;
+  /** manual = lo cargó la usuaria; detected = lo encontró el chequeo diario. */
+  source: "manual" | "detected";
+  created_at: string;
+};
+
 /** Link público de solo lectura. `category_id` null = toda la lista. */
 export type ShareLink = {
   id: string;

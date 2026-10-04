@@ -396,6 +396,42 @@ export async function revokeShareLink(token: string) {
   revalidateLists();
 }
 
+/** Código de descuento cargado a mano en la página de una tienda. */
+export async function addDiscountCode(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = await createClient();
+  await requireUser(supabase);
+
+  const domain = text(formData.get("domain"), 255)?.toLowerCase();
+  // Los códigos no llevan espacios; en mayúsculas se leen y se comparan mejor.
+  const code = text(formData.get("code"), 40)?.replace(/\s+/g, "").toUpperCase();
+  const expires = text(formData.get("expiresOn"), 10);
+  if (!domain || !isStoreDomain(domain)) return { error: "Falta la tienda." };
+  if (!code || code.length < 2) return { error: "Escribí el código." };
+  if (expires && !/^\d{4}-\d{2}-\d{2}$/.test(expires)) return { error: "La fecha no es válida." };
+
+  const { error } = await supabase.from("discount_codes").insert({
+    domain,
+    code,
+    description: text(formData.get("description"), 120),
+    expires_on: expires,
+  });
+
+  if (error) {
+    if (error.code === "23505") return { error: "Ese código ya está guardado." };
+    return { error: "No se pudo guardar el código. Probá de nuevo." };
+  }
+
+  revalidateLists();
+  return { error: null, ok: true };
+}
+
+export async function deleteDiscountCode(id: string) {
+  const supabase = await createClient();
+  await requireUser(supabase);
+  await supabase.from("discount_codes").delete().eq("id", id);
+  revalidateLists();
+}
+
 /** Se llama al abrir el panel de notificaciones: todo lo que estaba sin leer pasa a leído. */
 export async function markNotificationsRead() {
   const supabase = await createClient();

@@ -1,6 +1,6 @@
 import { isOnPromo } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
-import type { AppNotification, Category, Item, ItemStatus, ShareLink } from "@/lib/types";
+import type { AppNotification, Category, DiscountCode, Item, ItemStatus, ShareLink } from "@/lib/types";
 import AccountFooter from "@/components/account-footer";
 import AppHeader from "@/components/app-header";
 import FilterBar from "@/components/filter-bar";
@@ -51,8 +51,14 @@ export default async function HomePage(props: PageProps<"/">) {
 
   // El volumen de una wishlist personal es chico: se trae todo una vez y se
   // filtra en memoria, así los contadores de cada chip salen gratis.
-  const [{ data: categories }, { data: allItems }, { data: shareLinks }, { data: stores }, { data: notifications }] =
-    await Promise.all([
+  const [
+    { data: categories },
+    { data: allItems },
+    { data: shareLinks },
+    { data: stores },
+    { data: notifications },
+    { data: discountCodes },
+  ] = await Promise.all([
       supabase.from("categories").select("*").order("position"),
       supabase.from("items").select("*").order("created_at", { ascending: false }),
       supabase.from("share_links").select("*"),
@@ -62,6 +68,7 @@ export default async function HomePage(props: PageProps<"/">) {
         .select("id, item_id, type, data, created_at, read_at, item:items(id, title, url, domain, image_url, favicon_url)")
         .order("created_at", { ascending: false })
         .limit(30),
+      supabase.from("discount_codes").select("*").order("created_at", { ascending: false }),
     ]);
   const storeDomains = (stores ?? []).map((store) => store.domain as string);
 
@@ -129,6 +136,7 @@ export default async function HomePage(props: PageProps<"/">) {
           items={visible}
           categories={categoryList}
           storeDomains={storeDomains}
+          discountCodes={(discountCodes ?? []) as DiscountCode[]}
           hasAnyItem={items.length > 0}
         />
       </main>
