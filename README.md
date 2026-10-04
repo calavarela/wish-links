@@ -137,6 +137,15 @@ deja crear una nueva; `/listas/<id>` es la lista, con sus productos por estado.
   con `join_shared_list`. Desactivar el link no saca a nadie.
 - Una baja de precio en un producto compartido avisa a todos los miembros.
 
+## Categoría sugerida
+
+Al cargar un link, `src/lib/categorize.ts` preselecciona una categoría a partir del título
+(y algo de la descripción), sin red ni IA. Suma puntos por el nombre de la categoría en el
+título, por palabras de un diccionario según el tipo de categoría (ropa, tecno, casa,
+escritorio…) y por palabras que ya aparecen en títulos que la usuaria puso en esa categoría,
+así aprende las categorías propias. Si ninguna gana con claridad, no sugiere nada. El
+selector muestra "sugerida" y se puede cambiar.
+
 ## Etiquetas
 
 `tags` es el catálogo de cada usuaria (nombres en minúscula, únicos); los productos guardan

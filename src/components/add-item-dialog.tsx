@@ -4,11 +4,41 @@ import { useActionState, useCallback, useEffect, useState } from "react";
 import { AlertCircle, Loader2 } from "lucide-react";
 import posthog from "posthog-js";
 import { createItem, type ActionState } from "@/app/actions";
+import { suggestCategory, type CategorizedTitle } from "@/lib/categorize";
+import { createClient } from "@/lib/supabase/client";
 import type { Category, LinkPreview } from "@/lib/types";
 import Dialog from "./dialog";
 import ItemFields, { fieldClass } from "./item-fields";
 
 const EMPTY: ActionState = { error: null };
+
+/**
+ * Títulos ya categorizados de la lista personal, para que la sugerencia
+ * aprenda las categorías propias. Se pide al abrir el diálogo, mientras se
+ * escribe el link, así ya está cuando llega la vista previa.
+ */
+function useCategorizedTitles(enabled: boolean): CategorizedTitle[] {
+  const [history, setHistory] = useState<CategorizedTitle[]>([]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    let cancelled = false;
+    createClient()
+      .from("items")
+      .select("title, category_id")
+      .is("shared_list_id", null)
+      .not("category_id", "is", null)
+      .limit(500)
+      .then(({ data }) => {
+        if (!cancelled) setHistory((data as CategorizedTitle[] | null) ?? []);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled]);
+
+  return history;
+}
 
 export default function AddItemDialog({
   open,
@@ -30,6 +60,11 @@ export default function AddItemDialog({
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [state, formAction, saving] = useActionState(createItem, EMPTY);
+  const history = useCategorizedTitles(open && categories.length > 0);
+  // Se calcula al llegar la vista previa; la usuaria la puede cambiar en el selector.
+  const suggestedCategoryId = preview
+    ? suggestCategory({ title: preview.title, description: preview.description }, categories, history)
+    : null;
 
   const loadPreview = useCallback(async (value: string) => {
     if (!value.trim()) return;
@@ -155,6 +190,7 @@ export default function AddItemDialog({
 
           <ItemFields
             categories={categories}
+            categorySuggested={suggestedCategoryId !== null}
             defaults={{
               title: preview.title,
               imageUrl: preview.imageUrl,
@@ -162,6 +198,7 @@ export default function AddItemDialog({
               domain: preview.domain,
               priceAmount: preview.priceAmount,
               priceCurrency: preview.priceCurrency,
+              categoryId: suggestedCategoryId,
               status: "pending",
             }}
           />
