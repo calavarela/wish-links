@@ -45,16 +45,19 @@ export async function GET(request: NextRequest) {
   // El mismo producto puede estar en varias listas: se lee una sola vez.
   const previews = new Map<string, Promise<LinkPreview>>();
   let changed = 0;
+  let promos = 0;
 
   async function check(item: PendingItem) {
     if (!previews.has(item.url)) previews.set(item.url, fetchPreview(item.url));
     const preview = await previews.get(item.url)!;
     const update = priceUpdate(item, preview);
     if (update) changed++;
+    const promo = promoUpdate(item, preview, update?.price_amount ?? item.price_amount);
+    if (promo?.list_price_amount) promos++;
 
     await supabase!
       .from("items")
-      .update({ ...update, price_checked_at: new Date().toISOString() })
+      .update({ ...update, ...promo, price_checked_at: new Date().toISOString() })
       .eq("id", item.id);
   }
 
@@ -67,7 +70,19 @@ export async function GET(request: NextRequest) {
     }),
   );
 
-  return NextResponse.json({ checked: items.length, changed });
+  return NextResponse.json({ checked: items.length, changed, promos });
+}
+
+/**
+ * El precio de lista se reescribe en cada lectura buena, así una promo que
+ * terminó queda en null. Si la página no se pudo leer, no se toca.
+ */
+function promoUpdate(item: PendingItem, preview: LinkPreview, price: number | null) {
+  if (preview.blocked || preview.priceAmount === null) return null;
+  if (item.price_currency && preview.priceCurrency && item.price_currency !== preview.priceCurrency) return null;
+
+  const list = preview.listPriceAmount;
+  return { list_price_amount: list !== null && price !== null && list > Number(price) ? list : null };
 }
 
 /** Los campos a cambiar, o null si el precio sigue igual o no se pudo leer. */

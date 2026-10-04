@@ -119,6 +119,11 @@ function parseAmount(raw: FormDataEntryValue | null): number | null {
   return Number.isFinite(value) && value >= 0 ? value : null;
 }
 
+/** El de lista que detectó la vista previa, solo si sigue siendo mayor al precio (pudo editarlo a mano). */
+function promoListPrice(list: number | null, price: number | null): number | null {
+  return list !== null && price !== null && list > price ? list : null;
+}
+
 function text(raw: FormDataEntryValue | null, max = 500): string | null {
   if (typeof raw !== "string") return null;
   const trimmed = raw.trim();
@@ -156,6 +161,7 @@ export async function createItem(_prev: ActionState, formData: FormData): Promis
     favicon_url: faviconFor(url),
     price_amount: priceAmount,
     price_currency: text(formData.get("priceCurrency"), 8),
+    list_price_amount: promoListPrice(parseAmount(formData.get("listPriceAmount")), priceAmount),
     status,
     note: text(formData.get("note"), 500),
     tags: parseTags(formData.get("tags")),

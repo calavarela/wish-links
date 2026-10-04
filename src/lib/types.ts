@@ -45,6 +45,8 @@ export type Item = {
   paid_currency: string | null;
   /** Precio antes del último cambio que detectó el chequeo diario. Una edición a mano lo limpia. */
   previous_price_amount: number | null;
+  /** Precio tachado que publica la tienda cuando está en promo; null = sin promo. */
+  list_price_amount: number | null;
   price_changed_at: string | null;
   /** Última vez que el chequeo diario leyó la página. */
   price_checked_at: string | null;
@@ -121,6 +123,8 @@ export type LinkPreview = {
   faviconUrl: string;
   priceAmount: number | null;
   priceCurrency: string | null;
+  /** Precio de lista (tachado) cuando el producto está en promo; en la misma moneda que el precio. */
+  listPriceAmount: number | null;
   /** true cuando la página no dejó leer nada y hay que completar a mano. */
   blocked: boolean;
 };

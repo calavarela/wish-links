@@ -1,3 +1,4 @@
+import { isOnPromo } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import type { AppNotification, Category, Item, ItemStatus, ShareLink } from "@/lib/types";
 import AccountFooter from "@/components/account-footer";
@@ -43,6 +44,7 @@ export default async function HomePage(props: PageProps<"/">) {
   const status = (first(params.status) ?? "pending") as ItemStatus | "all";
   const query = (first(params.q) ?? "").trim();
   const sort = (first(params.sort) ?? "recent") as SortKey;
+  const promoOnly = first(params.promo) === "1";
   const prefillUrl = first(params.add) ?? null;
 
   const supabase = await createClient();
@@ -73,6 +75,7 @@ export default async function HomePage(props: PageProps<"/">) {
       if (category === "none" && item.category_id !== null) return false;
       if (category !== "all" && category !== "none" && item.category_id !== category) return false;
       if (query && !matchesSearch(item, query)) return false;
+      if (promoOnly && !isOnPromo(item)) return false;
       return true;
     }),
     sort,
@@ -99,6 +102,7 @@ export default async function HomePage(props: PageProps<"/">) {
           activeCategory={category}
           activeStatus={status}
           activeSort={sort}
+          promoOnly={promoOnly}
         />
       </div>
 

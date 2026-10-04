@@ -134,6 +134,7 @@ export default function AddItemDialog({
           <input type="hidden" name="canonicalUrl" value={preview.canonicalUrl} />
           <input type="hidden" name="siteName" value={preview.siteName ?? ""} />
           <input type="hidden" name="description" value={preview.description ?? ""} />
+          <input type="hidden" name="listPriceAmount" value={preview.listPriceAmount ?? ""} />
 
           <div className="flex items-center gap-2 rounded-xl bg-stone-100 px-3 py-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}

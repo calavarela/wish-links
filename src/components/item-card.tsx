@@ -47,6 +47,10 @@ export default function ItemCard({
 
   const price = formatPrice(item.price_amount, item.price_currency);
   const changePct = priceChangePct(item.price_amount, item.previous_price_amount);
+  // Negativo: cuánto menos que el precio de lista. Null si no hay promo.
+  const listPct = priceChangePct(item.price_amount, item.list_price_amount);
+  const promoPct = listPct !== null && listPct < 0 ? listPct : null;
+  const showPromo = item.status === "pending" && promoPct !== null;
   const paid = formatPrice(item.paid_amount, item.paid_currency);
   const isStored = Boolean(item.image_url && SUPABASE_URL && item.image_url.startsWith(SUPABASE_URL));
   const category = categories.find((c) => c.id === item.category_id);
@@ -167,8 +171,13 @@ export default function ItemCard({
             </h3>
 
             {price && (
-              <p className="flex items-center gap-1.5 text-sm font-semibold">
+              <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm font-semibold">
                 {price}
+                {promoPct !== null && (
+                  <s className="text-xs font-normal text-subtle">
+                    {formatPrice(item.list_price_amount, item.price_currency)}
+                  </s>
+                )}
                 {changePct !== null && (
                   <span
                     title={`Antes ${formatPrice(item.previous_price_amount, item.price_currency)}`}
@@ -186,8 +195,14 @@ export default function ItemCard({
 
             {item.note && <p className="line-clamp-1 text-xs text-muted">{item.note}</p>}
 
-            {(category || item.tags.length > 0) && (
+            {(showPromo || category || item.tags.length > 0) && (
               <div className="mt-1 flex flex-wrap gap-1">
+                {/* La promo va primero: es lo más útil de la fila. */}
+                {showPromo && (
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
+                    Promo {formatPct(promoPct!)}
+                  </span>
+                )}
                 {category && (
                   <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[10px] text-muted">
                     {category.emoji ? `${category.emoji} ` : ""}

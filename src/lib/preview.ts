@@ -88,6 +88,72 @@ function findProductNode(node: unknown, depth = 0): Record<string, unknown> | nu
   return null;
 }
 
+const STRIKETHROUGH = /strikethroughprice|listprice/i;
+
+function priceSpecs(offer: Record<string, unknown>): Record<string, unknown>[] {
+  const specs = offer.priceSpecification;
+  return (Array.isArray(specs) ? specs : specs ? [specs] : []) as Record<string, unknown>[];
+}
+
+const isStrikethrough = (spec: Record<string, unknown>) =>
+  typeof spec.priceType === "string" && STRIKETHROUGH.test(spec.priceType);
+
+/** schema.org: un UnitPriceSpecification con priceType StrikethroughPrice (o ListPrice) es el tachado. */
+function strikethroughFrom(offer: Record<string, unknown>): number | null {
+  const spec = priceSpecs(offer).find(isStrikethrough);
+  return spec ? parsePrice(spec.price) : null;
+}
+
+/** Algunas tiendas (Tricot) no ponen `price` en la oferta, solo la lista de priceSpecification. */
+function specPriceFrom(offer: Record<string, unknown>): unknown {
+  return priceSpecs(offer).find((spec) => !isStrikethrough(spec))?.price;
+}
+
+function samePath(candidate: unknown, pageUrl: string): boolean {
+  if (typeof candidate !== "string") return false;
+  try {
+    const strip = (path: string) => path.replace(/\/+$/, "");
+    return strip(new URL(candidate, pageUrl).pathname) === strip(new URL(pageUrl).pathname);
+  } catch {
+    return false;
+  }
+}
+
+/** Solo cuenta como promo si el de lista es mayor al precio y no es un disparate (más de 10x). */
+function validListPrice(list: number | null, price: number | null): number | null {
+  if (list === null || price === null || price <= 0) return null;
+  return list > price && list <= price * 10 ? list : null;
+}
+
+/**
+ * Shopify no pone el tachado en el HTML de forma confiable, pero toda tienda
+ * expone /products/<handle>.js con precios en centavos y compare_at_price.
+ */
+async function shopifyListPrice(pageUrl: string, price: number | null): Promise<number | null> {
+  try {
+    const url = new URL(pageUrl);
+    const match = url.pathname.match(/^(.*\/products\/[^/]+)\/?$/);
+    if (!match) return null;
+
+    const response = await fetch(`${url.origin}${match[1]}.js`, {
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      headers: { "User-Agent": BROWSER_UA, Accept: "application/json" },
+    });
+    if (!response.ok) return null;
+
+    const product = (await response.json()) as {
+      compare_at_price?: number | null;
+      variants?: { id: number; compare_at_price: number | null }[];
+    };
+    const variantId = url.searchParams.get("variant");
+    const variant = product.variants?.find((v) => String(v.id) === variantId);
+    const cents = variant ? variant.compare_at_price : product.compare_at_price;
+    return validListPrice(cents ? cents / 100 : null, price);
+  } catch {
+    return null;
+  }
+}
+
 async function readCapped(response: Response): Promise<string> {
   const reader = response.body?.getReader();
   if (!reader) return "";
@@ -123,6 +189,7 @@ function emptyPreview(rawUrl: string): LinkPreview {
     faviconUrl: faviconFor(rawUrl),
     priceAmount: null,
     priceCurrency: null,
+    listPriceAmount: null,
     blocked: true,
   };
 }
@@ -161,15 +228,25 @@ export async function fetchPreview(rawUrl: string): Promise<LinkPreview> {
   if (!isPubliclyFetchable(rawUrl)) return emptyPreview(rawUrl);
 
   const withBrowser = await fetchHtml(rawUrl, BROWSER_UA);
+  let page = withBrowser;
   let preview = withBrowser ? parseHtml(withBrowser.html, rawUrl, withBrowser.finalUrl) : null;
 
   if (!preview || preview.blocked) {
     const withCrawler = await fetchHtml(rawUrl, SOCIAL_CRAWLER_UA);
     const retry = withCrawler ? parseHtml(withCrawler.html, rawUrl, withCrawler.finalUrl) : null;
-    if (retry && !retry.blocked) preview = retry;
+    if (retry && !retry.blocked) {
+      preview = retry;
+      page = withCrawler;
+    }
   }
 
-  return preview ?? emptyPreview(rawUrl);
+  if (!preview) return emptyPreview(rawUrl);
+
+  if (preview.listPriceAmount === null && page && !preview.blocked && page.html.includes("cdn.shopify.com")) {
+    preview.listPriceAmount = await shopifyListPrice(preview.url, preview.priceAmount);
+  }
+
+  return preview;
 }
 
 function parseHtml(html: string, requestedUrl: string, finalUrl: string): LinkPreview {
@@ -223,14 +300,25 @@ function parseHtml(html: string, requestedUrl: string, finalUrl: string): LinkPr
     $('[itemprop="priceCurrency"]').first().attr("content") ??
     undefined;
 
+  // Precio de lista (tachado) del producto principal, para detectar promos.
+  let strikethroughPrice: number | null = null;
+  let mainOffer: Record<string, unknown> | null = null;
+
   // 2. JSON-LD: de acá sale el precio en la mayoría de los e-commerce.
   $('script[type="application/ld+json"]').each((_, el) => {
-    if (price !== null && title && image) return;
+    if (mainOffer && price !== null && title && image) return;
     const raw = $(el).contents().text();
     if (!raw.trim()) return;
     try {
       const node = findProductNode(JSON.parse(raw));
       if (!node) return;
+
+      // El primer Product es el de la página; los siguientes suelen ser relacionados.
+      if (!mainOffer) {
+        const offers = node.offers ?? node;
+        mainOffer = ((Array.isArray(offers) ? offers[0] : offers) as Record<string, unknown>) ?? {};
+        strikethroughPrice = strikethroughFrom(mainOffer);
+      }
 
       if (!title && typeof node.name === "string") title = node.name;
       if (!description && typeof node.description === "string") description = node.description;
@@ -250,7 +338,7 @@ function parseHtml(html: string, requestedUrl: string, finalUrl: string): LinkPr
         | Record<string, unknown>
         | undefined;
       if (offer) {
-        if (price === null) price = parsePrice(offer.price ?? offer.lowPrice ?? offer.highPrice);
+        if (price === null) price = parsePrice(offer.price ?? specPriceFrom(offer) ?? offer.lowPrice ?? offer.highPrice);
         if (!currency && typeof offer.priceCurrency === "string") currency = offer.priceCurrency;
       }
     } catch {
@@ -266,6 +354,14 @@ function parseHtml(html: string, requestedUrl: string, finalUrl: string): LinkPr
   const resolvedImage = absolute(image, baseUrl);
   const cleanTitle = title?.replace(/\s+/g, " ").trim() || null;
 
+  // Tiendanube no marca el tachado: con promo, el JSON-LD trae el precio de
+  // lista y su meta el que se paga. Solo vale si la oferta es de esta página.
+  let listPrice: number | null = strikethroughPrice;
+  const offer = mainOffer as Record<string, unknown> | null;
+  if (listPrice === null && offer && meta('meta[property="tiendanube:price"]') && samePath(offer.url, baseUrl)) {
+    listPrice = parsePrice(offer.price);
+  }
+
   return {
     url: baseUrl,
     canonicalUrl: canonicalizeUrl(canonicalSource),
@@ -277,6 +373,7 @@ function parseHtml(html: string, requestedUrl: string, finalUrl: string): LinkPr
     faviconUrl: faviconFor(baseUrl),
     priceAmount: price,
     priceCurrency: price !== null ? (currency?.toUpperCase() ?? currencyFromDomain(domain)) : null,
+    listPriceAmount: validListPrice(listPrice, price),
     // Sin host propio no hubo página real: se completa a mano.
     blocked: !sameHost || (!cleanTitle && !resolvedImage),
   };

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Funnel, Loader2, Settings2, Store as StoreIcon, Trash2 } from "lucide-react";
 import posthog from "posthog-js";
 import { createCategory, deleteCategory, type ActionState } from "@/app/actions";
+import { isOnPromo } from "@/lib/format";
 import type { Category, Item, ItemStatus } from "@/lib/types";
 import Dialog from "./dialog";
 import { fieldClass } from "./item-fields";
@@ -32,12 +33,14 @@ export default function FilterBar({
   activeCategory,
   activeStatus,
   activeSort,
+  promoOnly,
 }: {
   categories: Category[];
   items: Item[];
   activeCategory: string;
   activeStatus: ItemStatus | "all";
   activeSort: string;
+  promoOnly: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -61,6 +64,7 @@ export default function FilterBar({
     const params = new URLSearchParams(searchParams);
     params.delete("status");
     params.delete("sort");
+    params.delete("promo");
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }
 
@@ -125,7 +129,14 @@ export default function FilterBar({
         </div>
 
         <div className="flex items-center gap-2">
-          <FiltersMenu activeStatus={activeStatus} activeSort={activeSort} setParam={setParam} onReset={resetFilters} />
+          <FiltersMenu
+            activeStatus={activeStatus}
+            activeSort={activeSort}
+            promoOnly={promoOnly}
+            promoCount={inStatus.filter(isOnPromo).length}
+            setParam={setParam}
+            onReset={resetFilters}
+          />
 
           <Link
             href="/tiendas"
@@ -147,21 +158,25 @@ export default function FilterBar({
   );
 }
 
-/** Estado y orden en un solo botón: el número cuenta lo que no está en su valor por defecto. */
+/** Estado, orden y promos en un solo botón: el número cuenta lo que no está en su valor por defecto. */
 function FiltersMenu({
   activeStatus,
   activeSort,
+  promoOnly,
+  promoCount,
   setParam,
   onReset,
 }: {
   activeStatus: ItemStatus | "all";
   activeSort: string;
+  promoOnly: boolean;
+  promoCount: number;
   setParam: (key: string, value: string | null) => void;
   onReset: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const changed = Number(activeStatus !== "pending") + Number(activeSort !== "recent");
+  const changed = Number(activeStatus !== "pending") + Number(activeSort !== "recent") + Number(promoOnly);
 
   useEffect(() => {
     if (!open) return;
@@ -238,6 +253,18 @@ function FiltersMenu({
                 </button>
               ))}
             </div>
+          </fieldset>
+
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-2 text-xs font-medium text-subtle">Promociones</legend>
+            <button
+              type="button"
+              aria-pressed={promoOnly}
+              className={`${optionClass(promoOnly)} self-start`}
+              onClick={() => setParam("promo", promoOnly ? null : "1")}
+            >
+              Solo en promo <span className="opacity-60">{promoCount}</span>
+            </button>
           </fieldset>
 
           {changed > 0 && (

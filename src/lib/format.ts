@@ -12,6 +12,13 @@ export function formatPrice(amount: number | null, currency: string | null): str
   }
 }
 
+/** Tiene un precio de lista (tachado) por encima del actual. */
+export function isOnPromo(item: { price_amount: number | null; list_price_amount: number | null }): boolean {
+  return (
+    item.price_amount !== null && item.list_price_amount !== null && Number(item.list_price_amount) > Number(item.price_amount)
+  );
+}
+
 /** Variación entre dos precios en %, o null si no se puede calcular. */
 export function priceChangePct(current: number | null, previous: number | null): number | null {
   if (current === null || previous === null || previous <= 0 || current === previous) return null;

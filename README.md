@@ -82,6 +82,23 @@ nuevo con la etiqueta de % de suba o baja.
 - La ruta pide `Authorization: Bearer $CRON_SECRET` y usa `SUPABASE_SERVICE_ROLE_KEY`
   (`src/lib/supabase/admin.ts`), así que las dos variables tienen que estar en Vercel.
 
+## Promociones
+
+`items.list_price_amount` guarda el precio de lista (tachado) cuando el producto está en
+promo. Lo saca `fetchPreview` al agregar el link y el chequeo diario lo reescribe en cada
+lectura buena, así una promo que terminó vuelve a `null`. Cómo se detecta según la tienda:
+
+- **schema.org** (Tricot y cualquiera que lo use): un `priceSpecification` con
+  `priceType` `StrikethroughPrice` o `ListPrice`.
+- **Tiendanube**: con promo, el JSON-LD del producto trae el precio de lista y la meta
+  `tiendanube:price` el que se paga. Solo cuenta si la oferta es de la misma URL, porque
+  el JSON-LD también trae productos relacionados.
+- **Shopify**: `compare_at_price` de `/products/<handle>.js` (en centavos), de la
+  variante del link si tiene `?variant=`.
+
+Mercado Libre bloquea la lectura, así que no se detecta. La tarjeta muestra la etiqueta
+"Promo -X%" y el precio tachado, y el panel de filtros tiene "Solo en promo" (`?promo=1`).
+
 ## Notificaciones
 
 La campanita del header abre los avisos de la tabla `notifications`. Hoy hay un solo tipo,
