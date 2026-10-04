@@ -581,8 +581,9 @@ export async function deleteAccount(_prev: ActionState, formData: FormData): Pro
   redirect("/login?deleted=1");
 }
 
+/** Cierra la sesión solo en este dispositivo: el default de Supabase ("global") cierra todas. */
 export async function signOut() {
   const supabase = await createClient();
-  await supabase.auth.signOut();
+  await supabase.auth.signOut({ scope: "local" });
   redirect("/login");
 }

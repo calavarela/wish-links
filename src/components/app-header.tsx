@@ -2,9 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Heart, LogOut, Plus, Search, Share2 } from "lucide-react";
-import posthog from "posthog-js";
-import { signOut } from "@/app/actions";
+import Link from "next/link";
+import { Heart, Plus, Search, Share2, User } from "lucide-react";
 import type { AppNotification, Category, ShareLink } from "@/lib/types";
 import AddItemDialog from "./add-item-dialog";
 import NotificationsButton from "./notifications-button";
@@ -16,12 +15,14 @@ export default function AppHeader({
   shareLinks,
   activeCategoryId,
   notifications,
+  userEmail,
 }: {
   categories: Category[];
   prefillUrl: string | null;
   shareLinks: ShareLink[];
   activeCategoryId: string | null;
   notifications: AppNotification[];
+  userEmail: string | null;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -105,21 +106,15 @@ export default function AppHeader({
             <Share2 className="size-4" />
           </button>
 
-          <form
-            action={signOut}
-            onSubmit={() => {
-              posthog.reset();
-            }}
+          {/* Mismo tamaño que los otros botones (34px): la inicial del mail hace de avatar. */}
+          <Link
+            href="/perfil"
+            aria-label="Mi perfil"
+            title="Mi perfil"
+            className="flex size-[34px] items-center justify-center rounded-full bg-ink text-sm font-semibold uppercase text-white transition hover:bg-stone-700"
           >
-            <button
-              type="submit"
-              aria-label="Cerrar sesión"
-              title="Cerrar sesión"
-              className="flex items-center rounded-xl border border-line p-2 text-muted transition hover:border-ink hover:text-ink"
-            >
-              <LogOut className="size-4" />
-            </button>
-          </form>
+            {userEmail?.charAt(0) || <User className="size-4" />}
+          </Link>
         </div>
       </header>
 

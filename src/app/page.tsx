@@ -58,6 +58,7 @@ export default async function HomePage(props: PageProps<"/">) {
     { data: stores },
     { data: notifications },
     { data: discountCodes },
+    { data: auth },
   ] = await Promise.all([
       supabase.from("categories").select("*").order("position"),
       // Solo la lista personal: los productos de listas compartidas viven en /listas.
@@ -70,6 +71,7 @@ export default async function HomePage(props: PageProps<"/">) {
         .order("created_at", { ascending: false })
         .limit(30),
       supabase.from("discount_codes").select("*").order("created_at", { ascending: false }),
+      supabase.auth.getUser(),
     ]);
   const storeDomains = (stores ?? []).map((store) => store.domain as string);
 
@@ -102,6 +104,7 @@ export default async function HomePage(props: PageProps<"/">) {
           shareLinks={(shareLinks ?? []) as ShareLink[]}
           activeCategoryId={activeCategoryId}
           notifications={(notifications ?? []) as unknown as AppNotification[]}
+          userEmail={auth.user?.email ?? null}
         />
 
         <FilterBar
