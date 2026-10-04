@@ -142,7 +142,7 @@ export default function FilterBar({
 
           <Link
             href="/tiendas"
-            className="ml-auto flex items-center gap-1.5 rounded-lg border border-line bg-surface px-2 py-1 text-xs text-muted transition hover:border-ink hover:text-ink"
+            className="ml-auto flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-line bg-surface px-2 py-1 text-xs text-muted transition hover:border-ink hover:text-ink"
           >
             <StoreIcon className="size-3.5" />
             Tiendas favoritas
