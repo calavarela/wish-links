@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import posthog from "posthog-js";
 import { signIn, signUp, type AuthState } from "./actions";
 
@@ -27,6 +27,7 @@ const inputClass =
 
 export default function LoginForm({ next }: { next: string }) {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [showPassword, setShowPassword] = useState(false);
   const [signInState, signInAction, signingIn] = useActionState(signIn, EMPTY);
   const [signUpState, signUpAction, signingUp] = useActionState(signUp, EMPTY);
   useAuthSuccess(signInState);
@@ -59,15 +60,26 @@ export default function LoginForm({ next }: { next: string }) {
 
         <label className="flex flex-col gap-1.5">
           <span className="text-xs font-medium text-muted">Contraseña</span>
-          <input
-            className={inputClass}
-            type="password"
-            name="password"
-            autoComplete={isSignIn ? "current-password" : "new-password"}
-            placeholder={isSignIn ? "Tu contraseña" : "Mínimo 8 caracteres"}
-            minLength={isSignIn ? undefined : 8}
-            required
-          />
+          <div className="relative">
+            <input
+              className={`${inputClass} pr-11`}
+              type={showPassword ? "text" : "password"}
+              name="password"
+              autoComplete={isSignIn ? "current-password" : "new-password"}
+              placeholder={isSignIn ? "Tu contraseña" : "Mínimo 8 caracteres"}
+              minLength={isSignIn ? undefined : 8}
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((value) => !value)}
+              aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+              aria-pressed={showPassword}
+              className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-subtle transition hover:text-ink"
+            >
+              {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+            </button>
+          </div>
         </label>
 
         {state.error && (
