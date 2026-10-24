@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 // /go/ decide por su cuenta: con token de lista compartida es público, sin él pide sesión.
-const PUBLIC_PATHS = ["/login", "/auth", "/privacidad", "/terminos", "/w/", "/go/"];
+const PUBLIC_PATHS = ["/login", "/auth", "/recuperar", "/privacidad", "/terminos", "/w/", "/go/"];
 
 export async function proxy(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;

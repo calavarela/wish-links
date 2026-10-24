@@ -146,6 +146,21 @@ deja crear una nueva; `/listas/<id>` es la lista, con sus productos por estado.
   con `join_shared_list`. Desactivar el link no saca a nadie.
 - Una baja de precio en un producto compartido avisa a todos los miembros.
 
+## Contraseña
+
+- **Olvidé mi contraseña:** `/recuperar` pide el mail y llama a `resetPasswordForEmail`
+  (siempre responde lo mismo, para no revelar qué mails tienen cuenta). El link del mail va a
+  `/auth/confirm`, que acepta `token_hash` + `type` (sirve en cualquier dispositivo) o `code`
+  (PKCE, solo en el mismo navegador), deja la cookie `wl_password_recovery` por 15 minutos y
+  manda a `/perfil/contrasena` para elegir una nueva sin pedir la actual.
+- **Cambiar contraseña:** desde el perfil, `/perfil/contrasena` pide la actual y la verifica
+  antes de llamar a `updateUser`.
+- Configuración en Supabase: `…/auth/confirm` tiene que estar en Authentication → URL
+  Configuration → Redirect URLs; para que el link sirva en otro dispositivo, la plantilla
+  "Reset password" tiene que apuntar a
+  `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/perfil/contrasena`;
+  y para mandar mails a personas que no son del equipo del proyecto hace falta un SMTP propio.
+
 ## Categoría sugerida
 
 Al cargar un link, `src/lib/categorize.ts` preselecciona una categoría a partir del título

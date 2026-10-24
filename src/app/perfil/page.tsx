@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, ChevronRight, FileText, Shield, Store as StoreIcon, Users } from "lucide-react";
+import { ArrowLeft, Check, ChevronRight, FileText, KeyRound, Shield, Store as StoreIcon, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/format";
 import DeleteAccountButton from "@/components/delete-account-button";
@@ -15,7 +15,8 @@ export const metadata: Metadata = {
  * Datos de la cuenta y acciones sobre ella. Está pensada en secciones para ir
  * sumando configuraciones (nombre, notificaciones, moneda por defecto...).
  */
-export default async function ProfilePage() {
+export default async function ProfilePage(props: PageProps<"/perfil">) {
+  const { contrasena } = await props.searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -53,6 +54,13 @@ export default async function ProfilePage() {
         <h1 className="mt-3 max-w-full truncate text-lg font-semibold tracking-tight">{email}</h1>
       </header>
 
+      {contrasena === "ok" && (
+        <p className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          <Check className="size-4" />
+          Listo, cambiaste tu contraseña.
+        </p>
+      )}
+
       <dl className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Stat label="Guardados" value={saved} />
         <Stat label="Comprados" value={bought} />
@@ -62,6 +70,7 @@ export default async function ProfilePage() {
 
       <Section title="Cuenta">
         <Row label="Email" value={email} />
+        <LinkRow href="/perfil/contrasena" icon={<KeyRound className="size-4" />} label="Cambiar contraseña" />
         <Row label="Miembro desde" value={formatDate(user.created_at)} />
       </Section>
 

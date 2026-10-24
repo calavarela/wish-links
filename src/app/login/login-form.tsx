@@ -1,9 +1,11 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import posthog from "posthog-js";
+import PasswordInput from "@/components/password-input";
 import { signIn, signUp, type AuthState } from "./actions";
 
 const EMPTY: AuthState = { error: null, message: null };
@@ -22,12 +24,11 @@ function useAuthSuccess(state: AuthState) {
   }, [state, router]);
 }
 
-const inputClass =
+export const inputClass =
   "w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm outline-none placeholder:text-subtle focus:border-ink";
 
 export default function LoginForm({ next }: { next: string }) {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
-  const [showPassword, setShowPassword] = useState(false);
   const [signInState, signInAction, signingIn] = useActionState(signIn, EMPTY);
   const [signUpState, signUpAction, signingUp] = useActionState(signUp, EMPTY);
   useAuthSuccess(signInState);
@@ -59,27 +60,22 @@ export default function LoginForm({ next }: { next: string }) {
         </label>
 
         <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-muted">Contraseña</span>
-          <div className="relative">
-            <input
-              className={`${inputClass} pr-11`}
-              type={showPassword ? "text" : "password"}
-              name="password"
-              autoComplete={isSignIn ? "current-password" : "new-password"}
-              placeholder={isSignIn ? "Tu contraseña" : "Mínimo 8 caracteres"}
-              minLength={isSignIn ? undefined : 8}
-              required
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((value) => !value)}
-              aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-              aria-pressed={showPassword}
-              className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-subtle transition hover:text-ink"
-            >
-              {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-            </button>
-          </div>
+          <span className="flex items-center justify-between text-xs font-medium text-muted">
+            Contraseña
+            {isSignIn && (
+              <Link href="/recuperar" className="font-normal text-subtle transition hover:text-ink">
+                ¿Te la olvidaste?
+              </Link>
+            )}
+          </span>
+          <PasswordInput
+            className={inputClass}
+            name="password"
+            autoComplete={isSignIn ? "current-password" : "new-password"}
+            placeholder={isSignIn ? "Tu contraseña" : "Mínimo 8 caracteres"}
+            minLength={isSignIn ? undefined : 8}
+            required
+          />
         </label>
 
         {state.error && (
