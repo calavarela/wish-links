@@ -1,12 +1,13 @@
 "use client";
 
 import { useActionState, useCallback, useEffect, useRef, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Funnel, Loader2, Settings2, Store as StoreIcon, Trash2, Users } from "lucide-react";
 import posthog from "posthog-js";
 import { createCategory, deleteCategory, type ActionState } from "@/app/actions";
 import { isOnPromo } from "@/lib/format";
+import { replaceQuery } from "@/lib/query-state";
 import type { Category, Item, ItemStatus } from "@/lib/types";
 import Dialog from "./dialog";
 import { fieldClass } from "./item-fields";
@@ -45,7 +46,6 @@ export default function FilterBar({
   promoOnly: boolean;
   activeTag: string | null;
 }) {
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [managing, setManaging] = useState(false);
@@ -70,7 +70,7 @@ export default function FilterBar({
     const params = new URLSearchParams(searchParams);
     if (value) params.set(key, value);
     else params.delete(key);
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    replaceQuery(pathname, params);
   }
 
   // Una sola navegación: dos setParam seguidos partirían de la misma URL y el segundo pisaría al primero.
@@ -81,7 +81,7 @@ export default function FilterBar({
     params.delete("sort");
     params.delete("promo");
     params.delete("tag");
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    replaceQuery(pathname, params);
   }
 
   // Los contadores respetan el estado elegido: "Ropa 4" son 4 pendientes.

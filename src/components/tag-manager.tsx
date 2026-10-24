@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Check, Loader2, Pencil, Trash2, X } from "lucide-react";
 import posthog from "posthog-js";
 import { deleteTag, renameTag } from "@/app/actions";
+import { replaceQuery } from "@/lib/query-state";
 import type { Tag } from "@/lib/types";
 import Dialog from "./dialog";
 import { fieldClass } from "./item-fields";
@@ -13,7 +14,6 @@ import { useTagCatalog } from "./tag-picker";
 /** Renombrar o borrar etiquetas del catálogo. Los cambios se aplican a todos los productos propios. */
 export default function TagManager({ onClose }: { onClose: () => void }) {
   const [tags, reload] = useTagCatalog();
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -23,7 +23,7 @@ export default function TagManager({ onClose }: { onClose: () => void }) {
     const params = new URLSearchParams(searchParams);
     if (newName) params.set("tag", newName);
     else params.delete("tag");
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    replaceQuery(pathname, params);
   }
 
   return (

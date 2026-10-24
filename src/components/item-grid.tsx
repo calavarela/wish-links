@@ -1,5 +1,5 @@
 import { Heart } from "lucide-react";
-import { codesForDomain } from "@/lib/discount-codes";
+import { codesForDomain } from "@/lib/code-expiry";
 import type { Category, DiscountCode, Item } from "@/lib/types";
 import { isSameStore } from "@/lib/url";
 import ItemCard from "./item-card";

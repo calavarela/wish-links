@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { formatPrice } from "@/lib/format";
-import { codesForDomain } from "@/lib/discount-codes";
+import { codesForDomain } from "@/lib/code-expiry";
 import type { Category, DiscountCode, Item, ItemStatus, Store } from "@/lib/types";
 import { faviconFor, isSameStore, isStoreDomain, storeNameFromDomain } from "@/lib/url";
 import DiscountCodes from "@/components/discount-codes";

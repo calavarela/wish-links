@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Users } from "lucide-react";
-import { codesForDomain } from "@/lib/discount-codes";
+import { codesForDomain } from "@/lib/code-expiry";
 import { createClient } from "@/lib/supabase/server";
 import type { DiscountCode, Item, ItemStatus, SharedList, SharedListPerson } from "@/lib/types";
 import { isSameStore } from "@/lib/url";

@@ -1,6 +1,23 @@
 import type { DiscountCode } from "./types";
+import { isSameStore } from "./url";
 
 // Aparte de discount-codes.ts para que el cliente no arrastre cheerio.
+
+/**
+ * Códigos de la tienda de un item: vigentes primero (manuales antes que
+ * detectados) y, si se piden, los vencidos al final.
+ */
+export function codesForDomain(
+  codes: DiscountCode[],
+  domain: string | null,
+  { includeExpired = false } = {},
+): DiscountCode[] {
+  const today = todayInArgentina();
+  const rank = (c: DiscountCode) => (isExpired(c, today) ? 2 : 0) + (c.source === "manual" ? 0 : 1);
+  return codes
+    .filter((c) => isSameStore(domain, c.domain) && (includeExpired || !isExpired(c, today)))
+    .sort((a, b) => rank(a) - rank(b));
+}
 
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 

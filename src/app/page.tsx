@@ -1,53 +1,13 @@
-import { isOnPromo } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
-import type { AppNotification, Category, DiscountCode, Item, ItemStatus, ShareLink } from "@/lib/types";
+import type { AppNotification, Category, DiscountCode, Item, ShareLink } from "@/lib/types";
 import AccountFooter from "@/components/account-footer";
-import AppHeader from "@/components/app-header";
-import FilterBar from "@/components/filter-bar";
-import ItemGrid from "@/components/item-grid";
+import HomeContent from "@/components/home-content";
 
-type SortKey = "recent" | "price_asc" | "price_desc" | "title";
-
-function first(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
-}
-
-function matchesSearch(item: Item, query: string): boolean {
-  const haystack = [item.title, item.note, item.domain, item.site_name, ...item.tags]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-  return query
-    .toLowerCase()
-    .split(/\s+/)
-    .filter(Boolean)
-    .every((word) => haystack.includes(word));
-}
-
-function sortItems(items: Item[], sort: SortKey): Item[] {
-  const sorted = [...items];
-  switch (sort) {
-    case "price_asc":
-      return sorted.sort((a, b) => (a.price_amount ?? Infinity) - (b.price_amount ?? Infinity));
-    case "price_desc":
-      return sorted.sort((a, b) => (b.price_amount ?? -Infinity) - (a.price_amount ?? -Infinity));
-    case "title":
-      return sorted.sort((a, b) => (a.title ?? "").localeCompare(b.title ?? "", "es"));
-    default:
-      return sorted.sort((a, b) => b.created_at.localeCompare(a.created_at));
-  }
-}
-
-export default async function HomePage(props: PageProps<"/">) {
-  const params = await props.searchParams;
-  const category = first(params.cat) ?? "all";
-  const status = (first(params.status) ?? "pending") as ItemStatus | "all";
-  const query = (first(params.q) ?? "").trim();
-  const sort = (first(params.sort) ?? "recent") as SortKey;
-  const promoOnly = first(params.promo) === "1";
-  const tag = first(params.tag)?.toLowerCase() ?? null;
-  const prefillUrl = first(params.add) ?? null;
-
+/**
+ * Trae todo lo de la lista personal en un solo viaje. Los filtros y la búsqueda
+ * los aplica HomeContent en el navegador, así cambiarlos no vuelve a pasar por acá.
+ */
+export default async function HomePage() {
   const supabase = await createClient();
 
   // El volumen de una wishlist personal es chico: se trae todo una vez y se
@@ -61,92 +21,31 @@ export default async function HomePage(props: PageProps<"/">) {
     { data: discountCodes },
     { data: auth },
   ] = await Promise.all([
-      supabase.from("categories").select("*").order("position"),
-      // Solo la lista personal: los productos de listas compartidas viven en /listas.
-      supabase.from("items").select("*").is("shared_list_id", null).order("created_at", { ascending: false }),
-      supabase.from("share_links").select("*"),
-      supabase.from("stores").select("domain"),
-      supabase
-        .from("notifications")
-        .select("id, item_id, type, data, created_at, read_at, item:items(id, title, url, domain, image_url, favicon_url)")
-        .order("created_at", { ascending: false })
-        .limit(30),
-      supabase.from("discount_codes").select("*").order("created_at", { ascending: false }),
-      supabase.auth.getUser(),
-    ]);
-  const storeDomains = (stores ?? []).map((store) => store.domain as string);
-
-  const categoryList = (categories ?? []) as Category[];
-  const items = (allItems ?? []) as Item[];
-  const activeCategoryId = categoryList.some((c) => c.id === category) ? category : null;
-
-  const visible = sortItems(
-    items.filter((item) => {
-      if (status !== "all" && item.status !== status) return false;
-      if (category === "none" && item.category_id !== null) return false;
-      if (category !== "all" && category !== "none" && item.category_id !== category) return false;
-      if (query && !matchesSearch(item, query)) return false;
-      if (promoOnly && !isOnPromo(item)) return false;
-      if (tag && !item.tags.includes(tag)) return false;
-      return true;
-    }),
-    sort,
-  );
-
-  const total = visible.reduce((sum, item) => sum + (item.price_amount ?? 0), 0);
-  const currencies = new Set(visible.filter((i) => i.price_amount !== null).map((i) => i.price_currency ?? "ARS"));
+    supabase.from("categories").select("*").order("position"),
+    // Solo la lista personal: los productos de listas compartidas viven en /listas.
+    supabase.from("items").select("*").is("shared_list_id", null).order("created_at", { ascending: false }),
+    supabase.from("share_links").select("*"),
+    supabase.from("stores").select("domain"),
+    supabase
+      .from("notifications")
+      .select("id, item_id, type, data, created_at, read_at, item:items(id, title, url, domain, image_url, favicon_url)")
+      .order("created_at", { ascending: false })
+      .limit(30),
+    supabase.from("discount_codes").select("*").order("created_at", { ascending: false }),
+    supabase.auth.getUser(),
+  ]);
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-7xl flex-col">
-      {/* Header y filtros quedan fijos juntos: así no importa cuánto mida el header en cada pantalla. */}
-      <div className="sticky top-0 z-30">
-        <AppHeader
-          categories={categoryList}
-          prefillUrl={prefillUrl}
-          shareLinks={(shareLinks ?? []) as ShareLink[]}
-          activeCategoryId={activeCategoryId}
-          notifications={(notifications ?? []) as unknown as AppNotification[]}
-          userEmail={auth.user?.email ?? null}
-        />
-
-        <FilterBar
-          categories={categoryList}
-          items={items}
-          activeCategory={category}
-          activeStatus={status}
-          activeSort={sort}
-          promoOnly={promoOnly}
-          activeTag={tag}
-        />
-      </div>
-
-      <main className="flex-1 px-4 pb-24 sm:px-6">
-        <p className="mb-4 text-xs text-muted">
-          {visible.length === 0
-            ? "Sin resultados"
-            : `${visible.length} ${visible.length === 1 ? "link" : "links"}`}
-          {total > 0 && currencies.size === 1 && (
-            <>
-              {" · "}
-              <span className="font-medium text-ink">
-                {new Intl.NumberFormat("es-AR", {
-                  style: "currency",
-                  currency: [...currencies][0],
-                  maximumFractionDigits: 0,
-                }).format(total)}
-              </span>
-            </>
-          )}
-        </p>
-
-        <ItemGrid
-          items={visible}
-          categories={categoryList}
-          storeDomains={storeDomains}
-          discountCodes={(discountCodes ?? []) as DiscountCode[]}
-          hasAnyItem={items.length > 0}
-        />
-      </main>
+      <HomeContent
+        items={(allItems ?? []) as Item[]}
+        categories={(categories ?? []) as Category[]}
+        shareLinks={(shareLinks ?? []) as ShareLink[]}
+        storeDomains={(stores ?? []).map((store) => store.domain as string)}
+        discountCodes={(discountCodes ?? []) as DiscountCode[]}
+        notifications={(notifications ?? []) as unknown as AppNotification[]}
+        userEmail={auth.user?.email ?? null}
+      />
 
       <AccountFooter />
     </div>

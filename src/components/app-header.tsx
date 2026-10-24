@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Heart, Plus, Search, Share2, User } from "lucide-react";
+import { replaceQuery } from "@/lib/query-state";
 import type { AppNotification, Category, ShareLink } from "@/lib/types";
 import AddItemDialog from "./add-item-dialog";
 import NotificationsButton from "./notifications-button";
@@ -24,7 +25,6 @@ export default function AppHeader({
   notifications: AppNotification[];
   userEmail: string | null;
 }) {
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(searchParams.get("q") ?? "");
@@ -33,7 +33,8 @@ export default function AppHeader({
   const closeShare = useCallback(() => setSharing(false), []);
   const isFirstRender = useRef(true);
 
-  // Escribe la búsqueda en la URL con un respiro, para no navegar en cada tecla.
+  // Escribe la búsqueda en la URL (la lista filtra leyéndola, sin ir al
+  // servidor). Un respiro corto para no reescribir la URL en cada tecla.
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
@@ -43,13 +44,12 @@ export default function AppHeader({
       const params = new URLSearchParams(searchParams);
       if (query.trim()) params.set("q", query.trim());
       else params.delete("q");
-      // Sin este chequeo, cada navegación cambia searchParams y re-dispara este
-      // efecto en un bucle de peticiones al servidor.
+      // Sin este chequeo, cada cambio de searchParams re-dispararía este efecto en bucle.
       if (params.toString() === searchParams.toString()) return;
-      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-    }, 300);
+      replaceQuery(pathname, params);
+    }, 150);
     return () => clearTimeout(timeout);
-  }, [query, pathname, router, searchParams]);
+  }, [query, pathname, searchParams]);
 
   // Estable entre renders: si cambiara de referencia en cada render, el
   // efecto de éxito en AddItemDialog (que depende de onClose) se
@@ -58,9 +58,11 @@ export default function AppHeader({
     setAdding(false);
     if (prefillUrl) {
       // Saca el ?add= de la URL para que no se reabra al recargar.
-      router.replace(pathname, { scroll: false });
+      const params = new URLSearchParams(window.location.search);
+      params.delete("add");
+      replaceQuery(pathname, params);
     }
-  }, [prefillUrl, pathname, router]);
+  }, [prefillUrl, pathname]);
 
   return (
     <>
