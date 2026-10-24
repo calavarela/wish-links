@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AMAZON_NOTICE, amazonProgramActive } from "@/components/affiliate-disclosure";
 import { LegalPage, List, Section } from "@/components/legal-page";
 
 export const metadata: Metadata = {
@@ -8,7 +9,7 @@ export const metadata: Metadata = {
 };
 
 const CONTACT_EMAIL = "calavarela2004@gmail.com";
-const UPDATED = "28 de septiembre de 2026";
+const UPDATED = "24 de octubre de 2026";
 
 export default function TermsPage() {
   return (
@@ -80,6 +81,22 @@ export default function TermsPage() {
           los mismos después. Comprar a través de un link guardado es una relación directa entre
           vos y esa tienda; Wish Links no participa ni responde por esas compras.
         </p>
+      </Section>
+
+      <Section title="Links de afiliado">
+        <p>
+          Cuando abrís un producto desde Wish Links, el link puede pasar por un programa de
+          afiliados de la tienda (por ejemplo, Amazon o Mercado Libre). Si después comprás, la
+          tienda le puede pagar una comisión a Wish Links. Eso no cambia el precio que pagás ni lo
+          que la app te muestra: no ordenamos ni recomendamos productos según la comisión.
+        </p>
+        <List
+          items={[
+            "En tu lista siempre queda guardado el link original; el código de afiliado se agrega recién al abrirlo.",
+            "Si el link que guardaste ya trae el código de afiliado de otra persona (un creador, un blog, un cupón), lo respetamos tal cual y no lo reemplazamos por el nuestro.",
+            ...(amazonProgramActive() ? [AMAZON_NOTICE] : []),
+          ]}
+        />
       </Section>
 
       <Section title="El servicio tal como está">

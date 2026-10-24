@@ -1,6 +1,7 @@
 import Link from "next/link";
+import AffiliateDisclosure from "./affiliate-disclosure";
 
-/** Links legales. Cerrar sesión y eliminar la cuenta están en /perfil. */
+/** Links legales y aviso de afiliados. Cerrar sesión y eliminar la cuenta están en /perfil. */
 export default function AccountFooter() {
   return (
     <footer className="flex flex-col items-center gap-2 px-4 pb-8 text-xs text-subtle sm:px-6">
@@ -12,6 +13,7 @@ export default function AccountFooter() {
           Política de privacidad
         </Link>
       </div>
+      <AffiliateDisclosure />
       <p>© {new Date().getFullYear()} Wish Links</p>
     </footer>
   );

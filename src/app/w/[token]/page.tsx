@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Heart } from "lucide-react";
+import AffiliateDisclosure from "@/components/affiliate-disclosure";
 import SharedItemLink from "@/components/shared-item-link";
 import { createClient } from "@/lib/supabase/server";
 import { formatPrice } from "@/lib/format";
@@ -74,6 +75,8 @@ export default async function SharedWishlistPage(props: PageProps<"/w/[token]">)
         <Link href="/login" className="font-medium text-ink transition hover:text-brand">
           Armá tu propia lista en Wish Links
         </Link>
+        {/* Los productos de esta lista también salen por /go, así que el aviso aplica acá. */}
+        <AffiliateDisclosure />
         <p>© {new Date().getFullYear()} Wish Links</p>
       </footer>
     </div>
