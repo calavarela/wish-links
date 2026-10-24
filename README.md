@@ -151,6 +151,15 @@ deja crear una nueva; `/listas/<id>` es la lista, con sus productos por estado.
   con `join_shared_list`. Desactivar el link no saca a nadie.
 - Una baja de precio en un producto compartido avisa a todos los miembros.
 
+## Login con Google
+
+"Continuar con Google" (`src/app/login/google-button.tsx`) llama a `signInWithOAuth` desde el
+navegador y la vuelta pasa por `/auth/confirm`, que canjea el `code` y respeta `next`. Si ya
+había una cuenta con el mismo mail, Supabase las une. Configuración: cliente OAuth "Aplicación
+web" en Google Cloud (proyecto `wish-links-512623`, app publicada) con la callback de Supabase
+como URI de redireccionamiento, y el proveedor Google activado en Supabase con ese Client ID y
+secreto.
+
 ## Contraseña
 
 - **Olvidé mi contraseña:** `/recuperar` pide el mail y llama a `resetPasswordForEmail`
