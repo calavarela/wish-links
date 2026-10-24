@@ -7,7 +7,9 @@ automática (título, imagen y precio), categorías, estados y búsqueda.
 
 - **Next.js 16** (App Router, Turbopack) + TypeScript + Tailwind CSS v4
 - **Supabase**: Postgres con Row Level Security, Auth por email y Storage para las imágenes
-- **Vercel** para el deploy
+- **Vercel** para el deploy, con las funciones en `gru1` (São Paulo, `vercel.json`): la base de
+  Supabase está en `sa-east-1`, y con el default de Vercel (Washington) cada consulta cruzaba
+  el continente.
 
 ## Correr en local
 
