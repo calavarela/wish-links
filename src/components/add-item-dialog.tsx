@@ -191,6 +191,7 @@ export default function AddItemDialog({
           <ItemFields
             categories={categories}
             categorySuggested={suggestedCategoryId !== null}
+            withCategory={!sharedListId}
             defaults={{
               title: preview.title,
               imageUrl: preview.imageUrl,

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
-import { CURRENCIES, type ItemStatus, type PurchaseSource } from "@/lib/types";
+import { CURRENCIES, type Category, type ItemStatus, type PurchaseSource } from "@/lib/types";
 import { fetchPreview } from "@/lib/preview";
 import {
   canonicalizeUrl,
@@ -296,6 +296,44 @@ export async function createCategory(_prev: ActionState, formData: FormData): Pr
 
   revalidateLists();
   return { error: null, ok: true };
+}
+
+/** Nombre comparable: sin mayúsculas, acentos ni espacios de más ("Decoración " = "decoracion"). */
+const categoryKey = (name: string) =>
+  name.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ");
+
+/**
+ * Crea una categoría desde el formulario de un producto, sin salir de él. Si
+ * ya hay una con el mismo nombre, devuelve esa en vez de duplicarla.
+ */
+export async function createCategoryInline(
+  rawName: string,
+  rawEmoji: string,
+): Promise<{ category: Category | null; existed: boolean; error: string | null }> {
+  const supabase = await createClient();
+  const user = await requireUser(supabase);
+
+  const name = rawName.trim().slice(0, 40);
+  if (!name) return { category: null, existed: false, error: "Poné un nombre." };
+
+  const { data: categories } = await supabase.from("categories").select("*").eq("user_id", user.id);
+  const existing = (categories as Category[] | null)?.find((c) => categoryKey(c.name) === categoryKey(name));
+  if (existing) return { category: existing, existed: true, error: null };
+
+  const { data, error } = await supabase
+    .from("categories")
+    .insert({
+      user_id: user.id,
+      name,
+      emoji: rawEmoji.trim().slice(0, 8) || null,
+      position: categories?.length ?? 0,
+    })
+    .select("*")
+    .single();
+  if (error || !data) return { category: null, existed: false, error: "No se pudo crear la categoría." };
+
+  revalidateLists();
+  return { category: data as Category, existed: false, error: null };
 }
 
 export async function deleteCategory(id: string) {

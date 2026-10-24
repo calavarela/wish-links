@@ -1,9 +1,10 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ImagePlus, Link2, Sparkles } from "lucide-react";
+import { ImagePlus, Link2 } from "lucide-react";
 import type { Category, ItemStatus } from "@/lib/types";
 import { CURRENCIES, STATUS_LABELS } from "@/lib/types";
+import CategoryField from "./category-field";
 import TagPicker from "./tag-picker";
 
 export const fieldClass =
@@ -26,11 +27,14 @@ export default function ItemFields({
   categories,
   defaults,
   categorySuggested = false,
+  withCategory = true,
 }: {
   categories: Category[];
   defaults: ItemDefaults;
   /** La categoría de `defaults` la eligió la sugerencia automática: se avisa, para revisarla. */
   categorySuggested?: boolean;
+  /** false en listas compartidas, donde los productos no llevan categoría. */
+  withCategory?: boolean;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(defaults.imageUrl ?? null);
@@ -133,29 +137,14 @@ export default function ItemFields({
         </label>
       </div>
 
-      {/* Sin categorías para elegir (en una lista compartida no hay), el selector no aporta nada. */}
-      <div className={`grid gap-2 ${categories.length > 0 ? "grid-cols-2" : "grid-cols-1"}`}>
-        {categories.length > 0 && (
-          <label className="flex flex-col gap-1.5">
-            <span className="flex items-center gap-1.5 text-xs font-medium text-muted">
-              Categoría
-              {categorySuggested && (
-                <span className="flex items-center gap-0.5 rounded-full bg-amber-100 px-1.5 text-[10px] font-medium text-amber-800">
-                  <Sparkles className="size-2.5" />
-                  sugerida
-                </span>
-              )}
-            </span>
-            <select className={fieldClass} name="categoryId" defaultValue={defaults.categoryId ?? ""}>
-              <option value="">Sin categoría</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.emoji ? `${category.emoji} ` : ""}
-                  {category.name}
-                </option>
-              ))}
-            </select>
-          </label>
+      {/* En una lista compartida no hay categorías (son personales): el selector no se muestra. */}
+      <div className={`grid gap-2 ${withCategory ? "grid-cols-2" : "grid-cols-1"}`}>
+        {withCategory && (
+          <CategoryField
+            categories={categories}
+            defaultValue={defaults.categoryId ?? null}
+            suggested={categorySuggested}
+          />
         )}
         <label className="flex flex-col gap-1.5">
           <span className="text-xs font-medium text-muted">Estado</span>

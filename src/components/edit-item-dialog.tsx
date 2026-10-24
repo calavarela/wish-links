@@ -53,6 +53,7 @@ export default function EditItemDialog({
 
         <ItemFields
           categories={categories}
+          withCategory={!item.shared_list_id}
           defaults={{
             title: item.title,
             imageUrl: item.image_url,
