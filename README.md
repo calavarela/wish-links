@@ -66,6 +66,15 @@ afiliados, que se activa con su variable de entorno (por ahora `AMAZON_ASSOCIATE
 base siempre queda el link original. La ruta solo redirige a URLs guardadas, así que no sirve
 como redirección abierta.
 
+**Afiliados ajenos:** si el link guardado ya trae la atribución de otra persona, sale tal cual
+y no se le aplica ningún programa propio (`foreignAttribution`). Se detectan el `tag` de
+Amazon (cualquier marketplace), los `matt_*` de Mercado Libre, los parámetros de Awin, Impact,
+CJ, Rakuten, Partnerize y ShareASale, y nombres genéricos como `aff_id` o `affiliate_id`. Si el
+`tag` es el nuestro, cuenta como propio. `ref` y `source` no cuentan, porque las tiendas los usan
+para navegación. Los links cortos (`amzn.to`, `meli.la`) nunca se tocan: las reglas solo
+aplican al dominio de la tienda. Las reglas nuevas tienen que definir `isOurs` para reconocer
+el código propio.
+
 ## Historial de precios
 
 Un Vercel Cron (`vercel.json`) llama una vez por día a `/api/cron/prices`, que vuelve a leer
