@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, Check, ChevronRight, FileText, KeyRound, Shield, Store as StoreIcon, Users } from "lucide-react";
+import { ArrowLeft, Check, ChevronRight, FileText, KeyRound, Receipt, Shield, Store as StoreIcon, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/format";
 import DeleteAccountButton from "@/components/delete-account-button";
@@ -75,6 +75,7 @@ export default async function ProfilePage(props: PageProps<"/perfil">) {
       </Section>
 
       <Section title="Atajos">
+        <LinkRow href="/gastos" icon={<Receipt className="size-4" />} label="Mis gastos" />
         <LinkRow href="/tiendas" icon={<StoreIcon className="size-4" />} label="Tiendas favoritas" />
         <LinkRow href="/listas" icon={<Users className="size-4" />} label="Listas compartidas" />
       </Section>
