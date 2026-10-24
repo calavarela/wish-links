@@ -18,6 +18,14 @@ export async function GET(request: NextRequest) {
   const code = params.get("code");
   const next = safeNext(params.get("next"));
 
+  // Login con Google cancelado o rechazado: de vuelta al login con un aviso (no a recuperar contraseña).
+  if (params.get("error") && !tokenHash) {
+    const login = new URL("/login", request.url);
+    login.searchParams.set("error", "google");
+    if (next !== "/") login.searchParams.set("next", next);
+    return NextResponse.redirect(login);
+  }
+
   const supabase = await createClient();
   let ok = false;
   let recovery = type === "recovery";

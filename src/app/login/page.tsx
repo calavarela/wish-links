@@ -3,7 +3,7 @@ import { Heart } from "lucide-react";
 import LoginForm from "./login-form";
 
 export default async function LoginPage(props: PageProps<"/login">) {
-  const { next, deleted } = await props.searchParams;
+  const { next, deleted, error } = await props.searchParams;
   const redirectTo = typeof next === "string" && next.startsWith("/") ? next : "/";
 
   return (
@@ -22,6 +22,12 @@ export default async function LoginPage(props: PageProps<"/login">) {
         {deleted === "1" && (
           <p className="mb-4 rounded-xl bg-stone-100 px-4 py-3 text-center text-sm text-muted">
             Tu cuenta y tus datos fueron eliminados.
+          </p>
+        )}
+
+        {error === "google" && (
+          <p className="mb-4 rounded-xl bg-brand-soft px-4 py-3 text-center text-sm text-brand">
+            No se pudo entrar con Google. Probá de nuevo o entrá con tu email.
           </p>
         )}
 

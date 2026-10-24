@@ -7,6 +7,7 @@ import { Loader2 } from "lucide-react";
 import posthog from "posthog-js";
 import PasswordInput from "@/components/password-input";
 import { signIn, signUp, type AuthState } from "./actions";
+import GoogleButton from "./google-button";
 
 const EMPTY: AuthState = { error: null, message: null };
 
@@ -40,6 +41,12 @@ export default function LoginForm({ next }: { next: string }) {
 
   return (
     <div className="rounded-2xl border border-line bg-surface p-6">
+      <GoogleButton next={next} />
+
+      <div className="my-4 flex items-center gap-3 text-[11px] text-subtle" aria-hidden>
+        <span className="h-px flex-1 bg-line" />o con tu email<span className="h-px flex-1 bg-line" />
+      </div>
+
       <form
         action={isSignIn ? signInAction : signUpAction}
         className="flex flex-col gap-3"
