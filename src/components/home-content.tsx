@@ -136,6 +136,7 @@ export default function HomeContent({
           storeDomains={storeDomains}
           discountCodes={discountCodes}
           hasAnyItem={items.length > 0}
+          statusFilter={status}
         />
       </main>
     </>

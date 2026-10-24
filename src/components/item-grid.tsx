@@ -1,6 +1,6 @@
 import { Heart } from "lucide-react";
 import { codesForDomain } from "@/lib/code-expiry";
-import type { Category, DiscountCode, Item } from "@/lib/types";
+import type { Category, DiscountCode, Item, ItemStatus } from "@/lib/types";
 import { isSameStore } from "@/lib/url";
 import ItemCard from "./item-card";
 
@@ -10,12 +10,15 @@ export default function ItemGrid({
   storeDomains,
   discountCodes,
   hasAnyItem,
+  statusFilter,
 }: {
   items: Item[];
   categories: Category[];
   storeDomains: string[];
   discountCodes: DiscountCode[];
   hasAnyItem: boolean;
+  /** El estado elegido en los filtros: decide si una tarjeta que cambia de estado sigue a la vista. */
+  statusFilter: ItemStatus | "all";
 }) {
   if (items.length === 0) {
     return (
@@ -50,6 +53,7 @@ export default function ItemGrid({
           categories={categories}
           storeSaved={storeDomains.some((domain) => isSameStore(item.domain, domain))}
           discountCode={codesForDomain(discountCodes, item.domain)[0] ?? null}
+          statusFilter={statusFilter}
         />
       ))}
     </div>

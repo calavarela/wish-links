@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useOptimistic, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { Check, MoreHorizontal, Pencil, RotateCcw, Star, Store as StoreIcon, Tag, Ticket, Trash2, X } from "lucide-react";
@@ -8,7 +8,7 @@ import posthog from "posthog-js";
 import { deleteItem, saveStoreFromItem, setItemStatus } from "@/app/actions";
 import { formatPct, formatPrice, priceChangePct } from "@/lib/format";
 import { isStoreDomain, storeDomain } from "@/lib/url";
-import { CURRENCIES, type Category, type DiscountCode, type Item, type PurchaseSource } from "@/lib/types";
+import { CURRENCIES, type Category, type DiscountCode, type Item, type ItemStatus, type PurchaseSource } from "@/lib/types";
 import Dialog from "./dialog";
 import EditItemDialog from "./edit-item-dialog";
 import { fieldClass } from "./item-fields";
@@ -21,6 +21,7 @@ export default function ItemCard({
   storeSaved,
   discountCode = null,
   addedBy = null,
+  statusFilter,
 }: {
   item: Item;
   categories: Category[];
@@ -29,6 +30,12 @@ export default function ItemCard({
   discountCode?: DiscountCode | null;
   /** En una lista compartida: quién lo agregó ("vos" o el nombre). */
   addedBy?: string | null;
+  /**
+   * El estado que se está mirando en la lista principal, para saber si al
+   * cambiarle el estado la tarjeta sigue a la vista. Sin él (páginas con
+   * secciones por estado), al cambiar de estado se va de la sección enseguida.
+   */
+  statusFilter?: ItemStatus | "all";
 }) {
   const [codeCopied, setCodeCopied] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -38,6 +45,14 @@ export default function ItemCard({
   const [paidAmount, setPaidAmount] = useState("");
   const [paidCurrency, setPaidCurrency] = useState("ARS");
   const [pending, startTransition] = useTransition();
+  // Lo que la usuaria acaba de hacer se ve ya, sin esperar al servidor. Cuando
+  // la acción termina (y llega la lista actualizada) vuelve a mandar `item`; si
+  // falló, la tarjeta queda como estaba.
+  const [optimistic, setOptimistic] = useOptimistic(
+    { status: item.status, removed: false },
+    (current, change: Partial<{ status: ItemStatus; removed: boolean }>) => ({ ...current, ...change }),
+  );
+  const status = optimistic.status;
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const pathname = usePathname();
@@ -57,8 +72,8 @@ export default function ItemCard({
   // Negativo: cuánto menos que el precio de lista. Null si no hay promo.
   const listPct = priceChangePct(item.price_amount, item.list_price_amount);
   const promoPct = listPct !== null && listPct < 0 ? listPct : null;
-  const showPromo = item.status === "pending" && promoPct !== null;
-  const showCode = item.status === "pending" && discountCode !== null;
+  const showPromo = status === "pending" && promoPct !== null;
+  const showCode = status === "pending" && discountCode !== null;
 
   function copyCode() {
     if (!discountCode) return;
@@ -72,10 +87,12 @@ export default function ItemCard({
   const isStored = Boolean(item.image_url && SUPABASE_URL && item.image_url.startsWith(SUPABASE_URL));
   const category = categories.find((c) => c.id === item.category_id);
 
-  function run(action: () => Promise<void>) {
+  /** Corre la acción esperándola (así `pending` dura lo que tarda) y muestra el cambio ya. */
+  function run(action: () => Promise<void>, change?: Partial<{ status: ItemStatus; removed: boolean }>) {
     setMenuOpen(false);
-    startTransition(() => {
-      void action();
+    startTransition(async () => {
+      if (change) setOptimistic(change);
+      await action();
     });
   }
 
@@ -115,8 +132,13 @@ export default function ItemCard({
       has_paid_amount: hasPaid,
       paid_vs_listed_pct: paidVsListedPct,
     });
-    run(() => setItemStatus(item.id, "bought", { source, paidAmount, paidCurrency }));
+    run(() => setItemStatus(item.id, "bought", { source, paidAmount, paidCurrency }), { status: "bought" });
   }
+
+  // Borrada, o con un estado que ya no corresponde a lo que se está mirando: se va de la vista.
+  const leftView =
+    status !== item.status && (statusFilter === undefined || (statusFilter !== "all" && status !== statusFilter));
+  if (optimistic.removed || leftView) return null;
 
   return (
     <>
@@ -125,7 +147,7 @@ export default function ItemCard({
         // Con el menú abierto la tarjeta pasa adelante, así no la tapan las de la fila siguiente.
         className={`group relative rounded-2xl border border-line bg-surface transition hover:shadow-md ${
           menuOpen ? "z-20" : ""
-        } ${pending ? "opacity-50" : ""} ${item.status !== "pending" ? "opacity-75" : ""}`}
+        } ${pending ? "opacity-50" : ""} ${status !== "pending" ? "opacity-75" : ""}`}
       >
         <a
           href={`/go/${item.id}`}
@@ -162,12 +184,12 @@ export default function ItemCard({
               </div>
             )}
 
-            {item.status === "bought" && (
+            {status === "bought" && (
               <span className="absolute left-2 top-2 rounded-full bg-ink px-2 py-0.5 text-[10px] font-medium text-white">
                 Comprado
               </span>
             )}
-            {item.status === "discarded" && (
+            {status === "discarded" && (
               <span className="absolute left-2 top-2 rounded-full bg-stone-500 px-2 py-0.5 text-[10px] font-medium text-white">
                 Descartado
               </span>
@@ -208,7 +230,7 @@ export default function ItemCard({
               </p>
             )}
 
-            {item.status === "bought" && paid && <p className="text-xs text-muted">Pagaste {paid}</p>}
+            {status === "bought" && paid && <p className="text-xs text-muted">Pagaste {paid}</p>}
 
             {item.note && <p className="line-clamp-1 text-xs text-muted">{item.note}</p>}
 
@@ -276,7 +298,7 @@ export default function ItemCard({
                   setEditing(true);
                 }}
               />
-              {item.status === "pending" ? (
+              {status === "pending" ? (
                 <>
                   <MenuItem
                     icon={<Check className="size-3.5" />}
@@ -288,7 +310,7 @@ export default function ItemCard({
                     label="Descartar"
                     onClick={() => {
                       posthog.capture("item_status_changed", { from_status: item.status, to_status: "discarded" });
-                      run(() => setItemStatus(item.id, "discarded"));
+                      run(() => setItemStatus(item.id, "discarded"), { status: "discarded" });
                     }}
                   />
                 </>
@@ -298,7 +320,7 @@ export default function ItemCard({
                   label="Volver a pendiente"
                   onClick={() => {
                     posthog.capture("item_status_changed", { from_status: item.status, to_status: "pending" });
-                    run(() => setItemStatus(item.id, "pending"));
+                    run(() => setItemStatus(item.id, "pending"), { status: "pending" });
                   }}
                 />
               )}
@@ -329,7 +351,7 @@ export default function ItemCard({
                 onClick={() => {
                   if (confirm("¿Borrar este link de la lista?")) {
                     posthog.capture("item_deleted");
-                    run(() => deleteItem(item.id));
+                    run(() => deleteItem(item.id), { removed: true });
                   } else setMenuOpen(false);
                 }}
               />
