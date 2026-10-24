@@ -1,6 +1,13 @@
 import * as cheerio from "cheerio";
 import type { LinkPreview } from "./types";
-import { canonicalizeUrl, faviconFor, getDomain, isPubliclyFetchable } from "./url";
+import {
+  canonicalizeUrl,
+  faviconFor,
+  getDomain,
+  isPubliclyFetchable,
+  isRedirectShortener,
+  unwrapOutboundLink,
+} from "./url";
 
 const BROWSER_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
@@ -219,6 +226,34 @@ async function fetchHtml(
   }
 }
 
+/**
+ * Sigue un link corto (share.google, a.co, amzn.to, meli.la...) hasta la página
+ * real. Sin esto, la redirección a otro dominio parece un muro anti-bot y queda
+ * guardado el acortador en vez de la tienda. Si no se puede resolver, devuelve
+ * el link como vino. Los parámetros del destino (incluido un código de
+ * afiliado ajeno) se conservan tal cual.
+ */
+export async function resolveShortLink(rawUrl: string): Promise<string> {
+  const outbound = unwrapOutboundLink(rawUrl);
+  if (outbound) return outbound;
+  if (!isRedirectShortener(rawUrl) || !isPubliclyFetchable(rawUrl)) return rawUrl;
+
+  try {
+    const response = await fetch(rawUrl, {
+      redirect: "follow",
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      headers: { "User-Agent": BROWSER_UA, Accept: "text/html,*/*;q=0.8" },
+    });
+    // Solo interesa adónde terminó; el contenido no (algunas tiendas responden 403 a bots, igual sirve).
+    await response.body?.cancel().catch(() => {});
+    const final = response.url;
+    if (!final || final === rawUrl || isRedirectShortener(final) || !isPubliclyFetchable(final)) return rawUrl;
+    return final;
+  } catch {
+    return rawUrl;
+  }
+}
+
 /** HTML de una página pública con el user-agent de navegador, o null si no se pudo leer. */
 export async function fetchPageHtml(url: string): Promise<string | null> {
   if (!isPubliclyFetchable(url)) return null;
@@ -230,7 +265,8 @@ export async function fetchPageHtml(url: string): Promise<string | null> {
  * pero sí le sirven las etiquetas Open Graph al crawler de las redes sociales,
  * que es justo lo que necesitamos.
  */
-export async function fetchPreview(rawUrl: string): Promise<LinkPreview> {
+export async function fetchPreview(inputUrl: string): Promise<LinkPreview> {
+  const rawUrl = await resolveShortLink(inputUrl);
   if (!isPubliclyFetchable(rawUrl)) return emptyPreview(rawUrl);
 
   const withBrowser = await fetchHtml(rawUrl, BROWSER_UA);

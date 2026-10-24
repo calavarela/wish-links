@@ -29,6 +29,9 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<publishable key>
   **JSON-LD de tipo Product**. Si la tienda rechaza el navegador headless, reintenta con el
   user-agent del crawler de redes sociales, que muchas sí permiten (así funciona Mercado
   Libre). Si aun así no hay nada, la tarjeta se completa a mano.
+- Los links cortos (`share.google`, `a.co`, `amzn.to`, `meli.la`, `bit.ly`...) se siguen hasta
+  la página real antes de leerla (`resolveShortLink`), y los links de salida de Instagram y
+  Facebook se abren desde su parámetro `u`. Así se guarda la tienda y no el acortador.
 - `src/lib/url.ts` limpia los parámetros de tracking (`utm_*`, `ref`, etc.) para guardar una
   URL canónica estable y detectar duplicados.
 - Las imágenes de preview se **copian al Storage de Supabase**, así que la tarjeta se sigue

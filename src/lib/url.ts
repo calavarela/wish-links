@@ -101,11 +101,40 @@ const SECTION_SUBDOMAINS = new Set(["www", "m", "articulo", "listado", "produto"
 const STORE_PLATFORMS = /\.(mitiendanube\.com|myshopify\.com|empretienda\.com\.ar|tiendanegocio\.com)$/i;
 const TLD_LABELS = new Set(["com", "net", "org", "co", "ar", "br", "mx", "cl", "uy", "es", "us", "uk", "io", "app", "shop", "store"]);
 
-/** Acortadores y links de compartir: el dominio no es el de la tienda. */
-const LINK_SHORTENERS = new Set(["share.google", "a.co", "amzn.to", "bit.ly", "t.co", "tinyurl.com", "meli.la", "linktr.ee", "l.instagram.com"]);
+/**
+ * Acortadores y links de compartir que redirigen a la página real: se siguen
+ * antes de leer la vista previa (ver resolveShortLink en preview.ts).
+ */
+const REDIRECT_SHORTENERS = new Set([
+  "share.google", "a.co", "amzn.to", "amzn.eu", "amzn.asia", "meli.la", "bit.ly", "t.co", "tinyurl.com", "goo.gl",
+  "cutt.ly", "ow.ly", "rebrand.ly", "shorturl.at", "lnkd.in", "l.instagram.com", "l.facebook.com", "lm.facebook.com",
+]);
+
+/** Acortadores y links de compartir: el dominio no es el de la tienda. linktr.ee es una página, no redirige. */
+const LINK_SHORTENERS = new Set([...REDIRECT_SHORTENERS, "linktr.ee"]);
 
 export function isStoreDomain(domain: string | null): domain is string {
   return Boolean(domain && domain.includes(".") && !LINK_SHORTENERS.has(domain.toLowerCase()));
+}
+
+/** Es un link corto que hay que seguir para llegar al producto. */
+export function isRedirectShortener(url: string): boolean {
+  return REDIRECT_SHORTENERS.has(getDomain(url).toLowerCase());
+}
+
+/**
+ * Los "links de salida" de Instagram y Facebook llevan el destino en `u`: se
+ * saca de ahí sin tener que pedir nada (y sin pasar por su muro de login).
+ */
+export function unwrapOutboundLink(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (!/^(l|lm)\.(instagram|facebook)\.com$/i.test(parsed.hostname)) return null;
+    const target = parsed.searchParams.get("u");
+    return target && /^https?:\/\//i.test(target) ? target : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Dominio con el que se guarda una tienda: sin www ni subdominios de sección. */
